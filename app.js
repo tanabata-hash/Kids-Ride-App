@@ -24,9 +24,67 @@ window.navigate = navigate;
 function renderHeader(title) {
   return `
     <header>
-      <div class="brand">
-        <i class="ph-fill ph-car-profile"></i>
-        KidsRide
+      <div class="brand" style="cursor: pointer;" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 500 450" class="brand-logo-img" style="width: 34px; height: 34px; vertical-align: middle; margin-right: 8px;" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#E86C1C" />
+              <stop offset="100%" stop-color="#C0392B" />
+            </linearGradient>
+          </defs>
+          <circle cx="250" cy="225" r="215" fill="none" stroke="#E86C1C" stroke-width="15" />
+          <g transform="translate(25, 20) scale(0.9)">
+            <circle cx="250" cy="125" r="72" fill="url(#headerGrad)" />
+            <circle cx="165" cy="260" r="72" fill="url(#headerGrad)" />
+            <circle cx="335" cy="260" r="72" fill="url(#headerGrad)" />
+            <path d="M 250 260 C 210 200, 128 188, 128 260 C 128 332, 210 320, 250 260 C 290 200, 372 188, 372 260 C 372 332, 290 320, 250 260 Z" fill="none" stroke="url(#headerGrad)" stroke-width="34" stroke-linejoin="round" stroke-linecap="round" />
+            <path d="M 272 227 C 263 241, 237 279, 228 293" stroke="url(#headerGrad)" stroke-width="34" stroke-linecap="round" />
+            <path d="M 230 235 L 270 285" stroke="#C0392B" stroke-width="3.5" stroke-linecap="round" opacity="0.25" />
+          </g>
+          <circle cx="250" cy="125" r="52" fill="url(#headerGrad)" />
+          <circle cx="165" cy="260" r="52" fill="url(#headerGrad)" />
+          <circle cx="335" cy="260" r="52" fill="url(#headerGrad)" />
+          
+          <!-- 子供アイコン - 上部 -->
+          <g transform="translate(210, 82) scale(3.3)" fill="#FFFFFF">
+            <circle cx="12" cy="9" r="4.2" />
+            <circle cx="7.2" cy="9" r="1.0" />
+            <circle cx="16.8" cy="9" r="1.0" />
+            <path d="M 12 4.8 C 11.5 2, 8.5 2.5, 9.5 0.5 C 10 1.2, 11.5 2.5, 12.2 4.8" fill="#FFFFFF" />
+            <circle cx="10.2" cy="8.2" r="0.6" fill="#E86C1C" />
+            <circle cx="13.8" cy="8.2" r="0.6" fill="#E86C1C" />
+            <path d="M 10.5 10.8 C 11 11.8, 13 11.8, 13.5 10.8" stroke="#E86C1C" stroke-width="0.8" stroke-linecap="round" fill="none" />
+            <path d="M 8.5 13.5 C 8.5 12, 15.5 12, 15.5 13.5 C 15.5 16, 8.5 16, 8.5 13.5 Z" />
+            <circle cx="6.8" cy="12.8" r="1.0" />
+            <circle cx="17.2" cy="12.8" r="1.0" />
+            <circle cx="10" cy="17" r="1.2" />
+            <circle cx="14" cy="17" r="1.2" />
+          </g>
+          
+          <!-- 家アイコン - 左下 -->
+          <g transform="translate(128, 220) scale(2.8)" fill="#FFFFFF">
+            <rect x="15" y="6" width="3" height="8" rx="0.5" />
+            <path d="M 2 11 L 13 2 L 24 11 Z" />
+            <path d="M 4 10 L 22 10 L 22 21 C 22 22, 21 23, 20 23 L 6 23 C 5 23, 4 22, 4 21 Z" />
+            <rect x="8" y="12.5" width="3.5" height="3.5" rx="0.5" fill="#E86C1C" />
+            <rect x="12.5" y="12.5" width="3.5" height="3.5" rx="0.5" fill="#E86C1C" />
+            <rect x="8" y="17" width="3.5" height="3.5" rx="0.5" fill="#E86C1C" />
+            <rect x="12.5" y="17" width="3.5" height="3.5" rx="0.5" fill="#E86C1C" />
+          </g>
+          
+          <!-- 学校アイコン - 右下 -->
+          <g transform="translate(300, 220) scale(2.8)" fill="#FFFFFF">
+            <path d="M 4 12 L 22 12 L 22 23 C 22 24, 21 24, 20 24 L 6 24 C 5 24, 4 24, 4 23 Z" />
+            <rect x="11" y="17" width="4" height="7" rx="0.5" fill="#E86C1C" />
+            <rect x="6.5" y="15" width="3" height="5" rx="0.5" fill="#E86C1C" />
+            <rect x="16.5" y="15" width="3" height="5" rx="0.5" fill="#E86C1C" />
+            <path d="M 2 12 L 13 4 L 24 12 Z" />
+            <circle cx="13" cy="9" r="1.5" fill="#E86C1C" />
+            <path d="M 10 4 L 16 4 L 15 0 L 11 0 Z" fill="#FFFFFF" />
+            <circle cx="13" cy="2.5" r="1.0" fill="#E86C1C" />
+          </g>
+        </svg>
+        <span style="color:#1E293B;">Kids</span><span style="color:var(--primary);">Ride</span>
       </div>
     </header>
     <div style="background-color: #fee2e2; color: #991b1b; text-align: center; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; border-bottom: 1px solid #fca5a5; display: flex; align-items: center; justify-content: center; gap: 6px;">
@@ -125,7 +183,11 @@ function AuthLoginView() {
 
   return `
     ${renderHeader('ログイン')}
-    <main class="fade-in" style="display:flex; flex-direction:column; justify-content:center; padding-top:40px;">
+    <main class="fade-in" style="display:flex; flex-direction:column; justify-content:center; padding-top:20px;">
+      <!-- 美しく余白調整されたブランドロゴ -->
+      <div class="welcome-logo-container" style="width: 130px; height: 143px; margin: 24px auto 32px auto;">
+        <img src="./logo.png" alt="KidsRide Logo" class="welcome-logo" style="width: 100%; height: 100%; object-fit: contain;">
+      </div>
       <div style="text-align:center; margin-bottom:24px;">
         <h2 style="color:var(--primary); font-size:1.5rem;">${greeting}</h2>
         <p style="font-size:0.9rem;">メールアドレスとパスワードを入力してください。</p>
@@ -175,7 +237,11 @@ function RegisterView() {
 
   return `
     ${renderHeader('新規登録')}
-    <main class="fade-in" style="display:flex; flex-direction:column; justify-content:center; padding-top:40px;">
+    <main class="fade-in" style="display:flex; flex-direction:column; justify-content:center; padding-top:20px;">
+      <!-- 美しく余白調整されたブランドロゴ -->
+      <div class="welcome-logo-container" style="width: 120px; height: 132px; margin: 24px auto 32px auto;">
+        <img src="./logo.png" alt="KidsRide Logo" class="welcome-logo" style="width: 100%; height: 100%; object-fit: contain;">
+      </div>
       <div style="text-align:center; margin-bottom:24px;">
         <h2 style="color:var(--primary); font-size:1.5rem;">KidsRideへようこそ</h2>
         <p style="font-size:0.9rem;">保護者または送迎者としてご登録ください。</p>
