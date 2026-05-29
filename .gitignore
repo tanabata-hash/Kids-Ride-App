@@ -1,0 +1,17 @@
+# Local Env
+venv/
+.env
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Project Pitch/Screenshots (Web公開に不要なファイル)
+KidsRide_PitchDeck.pptx
+generate_pitch_deck.py
+take_screenshots.py
+deploy_app/
