@@ -28,7 +28,6 @@ function renderHeader(title) {
         <img src="./logo-symbol.png" alt="KidsRide Logo" class="brand-logo-img" style="width: 34px; height: 34px; vertical-align: middle;" />
         <span style="color:#1E293B; font-weight:700;">Kids<span style="color:var(--primary);">Ride</span></span>
       </div>
-      <div style="font-weight: 500; font-size: 1.1rem;">${title}</div>
     </header>
     <div style="background-color: #fee2e2; color: #991b1b; text-align: center; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; border-bottom: 1px solid #fca5a5; display: flex; align-items: center; justify-content: center; gap: 6px;">
       <i class="ph-fill ph-warning" style="font-size: 1rem;"></i>
