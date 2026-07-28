@@ -725,11 +725,11 @@ function RequestFormView() {
               }).join('')}
             </div>
 
-            <!-- 自動ハイライト用カレンダー (表示専用) -->
-            <div class="calendar-container" style="margin-bottom:16px; background-color:#fafafb; border-color:#e2e8f0;">
+            <!-- 自動ハイライト用カレンダー (クリック可能) -->
+            <div class="calendar-container" style="margin-bottom:16px;">
               <div class="calendar-header">
                 <span>2026年 8月 送迎日程（プレビュー）</span>
-                <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">選択した曜日が自動でハイライトされます</span>
+                <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">カレンダーの日付タップでも曜日を選択できます</span>
               </div>
               <div class="calendar-grid">
                 ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday">${w}</div>`).join('')}
@@ -740,7 +740,7 @@ function RequestFormView() {
                   const dayOfWeekVal = w === 0 ? 7 : w; // 1:月〜7:日
                   const isActive = state.requestForm.weeklyDays.includes(dayOfWeekVal);
                   const selectedClass = isActive ? 'day-parent-selected' : '';
-                  return `<div class="calendar-day ${selectedClass}" style="cursor: default; pointer-events: none;">${dayVal}</div>`;
+                  return `<div class="calendar-day ${selectedClass}" onclick="toggleWeeklyDay(${dayOfWeekVal})">${dayVal}</div>`;
                 }).join('')}
                 ${Array(5).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
               </div>
@@ -873,6 +873,37 @@ function PaymentView() {
   let costItemBreakdown = '';
   let planLabel = '';
   
+  // 2026年8月のカレンダーを生成 (1日は土曜日、前月分余白6日、当月31日、翌月分余白5日、計42マス)
+  let calendarDaysHtml = '';
+  for (let i = 0; i < 6; i++) {
+    calendarDaysHtml += '<div class="calendar-day muted"></div>';
+  }
+  for (let d = 1; d <= 31; d++) {
+    // 曜日を計算 (0:日、1:月、...、6:土)
+    const w = (d + 5) % 7; 
+    const dayOfWeekVal = w === 0 ? 7 : w; // 1:月〜7:日
+    
+    let isSelected = false;
+    if (state.requestForm.frequency === 'once') {
+      isSelected = (state.requestForm.onceDate === d);
+    } else if (state.requestForm.frequency === 'weekly') {
+      isSelected = state.requestForm.weeklyDays.includes(dayOfWeekVal);
+    } else if (state.requestForm.frequency === 'monthly') {
+      if (state.requestForm.monthlyType === 'dates') {
+        isSelected = state.requestForm.monthlyDays.includes(d);
+      } else {
+        // 平日のみ
+        isSelected = (dayOfWeekVal >= 1 && dayOfWeekVal <= 5);
+      }
+    }
+    
+    const selectedClass = isSelected ? 'day-parent-selected' : '';
+    calendarDaysHtml += `<div class="calendar-day ${selectedClass}" style="cursor: default; pointer-events: none;">${d}</div>`;
+  }
+  for (let i = 0; i < 5; i++) {
+    calendarDaysHtml += '<div class="calendar-day muted"></div>';
+  }
+  
   if (state.requestForm.frequency === 'once') {
     planLabel = state.requestForm.onceDate ? `単発・都度送迎（8月${state.requestForm.onceDate}日・計1回分）` : '単発・都度送迎（計1回分）';
     costItemBreakdown = `
@@ -955,6 +986,19 @@ function PaymentView() {
           <strong>予定:</strong> ${state.requestForm.timeType === 'Morning' ? '朝' : '夕'} ${state.requestForm.specificTime}指定<br>
           <strong>対象施設:</strong> ${state.requestForm.kindergarten || '未選択'}<br>
           <strong>ご指名の送迎者:</strong> ${method}
+        </div>
+
+        <!-- 決済前の日程確認カレンダー -->
+        <div style="border-top: 1px dashed var(--border); padding-top: 12px; margin-top: 16px;">
+          <div style="font-size:0.8rem; font-weight:700; color:var(--text-main); margin-bottom:8px; display:flex; align-items:center; gap:4px;">
+            <i class="ph ph-calendar-check" style="color:var(--primary);"></i> 8月の送迎予定カレンダー（最終確認）
+          </div>
+          <div class="calendar-container" style="padding: 8px; box-shadow: none; border-color: var(--border); background: #fafdfb; margin-top: 4px;">
+            <div class="calendar-grid">
+              ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday" style="font-size:0.7rem; padding-bottom:4px;">${w}</div>`).join('')}
+              ${calendarDaysHtml}
+            </div>
+          </div>
         </div>
       </div>
 
