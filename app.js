@@ -7,7 +7,13 @@ const state = {
     location: '',
     timeType: 'Morning',
     specificTime: '07:00',
-    selectedDriver: 'おまかせ（自動マッチング）'
+    selectedDriver: 'おまかせ（自動マッチング）',
+    frequency: 'once', // 'once' (都度), 'weekly' (週単位), 'monthly' (月単位)
+    weeklyDays: [], // 選択された曜日 [1, 2, 3, 4, 5, 6, 0] (1:月〜7:日)
+    monthlyType: 'dates', // 'dates' (日付指定), 'flat' (月定額)
+    monthlyDays: [], // 選択された日付 [1, 2, 3...]
+    estimatedPrice: 250,
+    estimatedTrips: 1
   }
 };
 
@@ -369,10 +375,42 @@ function DashboardView() {
     </div>
   `).join('');
 
+  let activePlanHtml = '';
+  if (state.requestForm.isBooked && state.requestForm.frequency !== 'once') {
+    let detailText = '';
+    if (state.requestForm.frequency === 'weekly') {
+      const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
+      const selectedDays = state.requestForm.weeklyDays.map(d => dayNames[d - 1]).join('・');
+      detailText = `毎週 [${selectedDays}] ${state.requestForm.specificTime}指定 お送り・お迎え`;
+    } else if (state.requestForm.frequency === 'monthly') {
+      if (state.requestForm.monthlyType === 'dates') {
+        detailText = `月単位日付指定 (計 ${state.requestForm.estimatedTrips}回) ${state.requestForm.specificTime}指定`;
+      } else {
+        detailText = `安心月定額プラン (平日毎日) ${state.requestForm.specificTime}指定`;
+      }
+    }
+    
+    activePlanHtml = `
+      <div class="card" style="border: 2px solid var(--secondary); background: #f0fdf4; margin-bottom: 20px; box-shadow: none; cursor: default;">
+        <h3 style="color: var(--secondary); margin-top: 0; display: flex; align-items: center; gap: 6px; font-size: 1.05rem;">
+          <i class="ph-fill ph-check-circle" style="font-size: 1.2rem;"></i> 契約中の定期プラン
+        </h3>
+        <p style="font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main); margin-top: 8px;">
+          対象施設: ${state.requestForm.kindergarten || '三鷹市立大沢保育園'}
+        </p>
+        <p style="font-size: 0.8rem; margin-bottom: 0; color: var(--text-muted); line-height: 1.4;">
+          <strong>プラン内容:</strong> ${detailText}<br>
+          <strong>待ち合わせ:</strong> ${state.requestForm.location || '指定場所'}<br>
+          <strong>担当予定:</strong> ${state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? 'おまかせ（自動割当）' : state.requestForm.selectedDriver}
+        </p>
+      </div>
+    `;
+  }
+
   return `
     ${renderHeader('ホーム')}
     <main class="fade-in">
-      <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white;">
+      <div class="card" style="background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; margin-bottom: 20px;">
         <h2 style="color: white; font-size:1.5rem;">こんにちは、${currentUser.name.split(' ')[0]}さん！</h2>
         
         <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 8px; margin-top: 12px; margin-bottom: 12px;">
@@ -389,6 +427,8 @@ function DashboardView() {
 
         <button class="btn" style="background:transparent; border:1px solid white; color:white; margin-top:4px;" onclick="navigate('request')">新しく依頼する</button>
       </div>
+
+      ${activePlanHtml}
 
       <h3>過去の送迎履歴</h3>
       ${historyList}
@@ -427,8 +467,79 @@ window.selectTimeType = function(timeType) {
 window.updateSpecificTime = function(val) {
   state.requestForm.specificTime = val;
 };
+
+// 繰り返し設定と料金見積もり計算用の関数
+window.calculateEstimation = function() {
+  const form = state.requestForm;
+  if (form.frequency === 'once') {
+    form.estimatedTrips = 1;
+    form.estimatedPrice = 250;
+  } else if (form.frequency === 'weekly') {
+    // 週あたりの選択曜日数 × 4週間分として計算
+    const tripsPerWeek = form.weeklyDays.length;
+    form.estimatedTrips = tripsPerWeek * 4;
+    form.estimatedPrice = form.estimatedTrips * 250;
+  } else if (form.frequency === 'monthly') {
+    if (form.monthlyType === 'dates') {
+      // 日付指定まとめ：選択した日数。まとめ割引で1回230円を適用
+      form.estimatedTrips = form.monthlyDays.length;
+      form.estimatedPrice = form.estimatedTrips * 230;
+    } else {
+      // 月定額：平日使い放題（想定20回）で一律3,980円
+      form.estimatedTrips = 20;
+      form.estimatedPrice = 3980;
+    }
+  }
+};
+
+window.changeFrequency = function(freq) {
+  state.requestForm.frequency = freq;
+  window.calculateEstimation();
+  render();
+};
+
+window.toggleWeeklyDay = function(day) {
+  const idx = state.requestForm.weeklyDays.indexOf(day);
+  if (idx > -1) {
+    state.requestForm.weeklyDays.splice(idx, 1);
+  } else {
+    state.requestForm.weeklyDays.push(day);
+    state.requestForm.weeklyDays.sort();
+  }
+  window.calculateEstimation();
+  render();
+};
+
+window.changeMonthlyType = function(type) {
+  state.requestForm.monthlyType = type;
+  window.calculateEstimation();
+  render();
+};
+
+window.toggleMonthlyDay = function(day) {
+  const idx = state.requestForm.monthlyDays.indexOf(day);
+  if (idx > -1) {
+    state.requestForm.monthlyDays.splice(idx, 1);
+  } else {
+    state.requestForm.monthlyDays.push(day);
+    state.requestForm.monthlyDays.sort((a, b) => a - b);
+  }
+  window.calculateEstimation();
+  render();
+};
 window.submitRequest = function(event) {
   event.preventDefault();
+
+  // バリデーション
+  if (state.requestForm.frequency === 'weekly' && state.requestForm.weeklyDays.length === 0) {
+    alert('送迎を希望する曜日を1つ以上選択してください。');
+    return;
+  }
+  if (state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' && state.requestForm.monthlyDays.length === 0) {
+    alert('送迎を希望する日付を1つ以上選択してください。');
+    return;
+  }
+
   const select = document.getElementById('kindergarten-select');
   const otherInput = document.getElementById('request-other-kg');
   const location = document.getElementById('location-input');
@@ -498,16 +609,124 @@ function RequestFormView() {
         </div>
 
         <div class="form-group">
-          <label>5. 送迎時間の指定</label>
-          <div style="display:flex; gap:12px; margin-bottom:12px;">
-            <button type="button" class="btn ${state.requestForm.timeType === 'Morning' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Morning')">朝 (送り)</button>
-            <button type="button" class="btn ${state.requestForm.timeType === 'Evening' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Evening')">夕 (迎え)</button>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-weight:500; font-size:0.9rem; color:var(--text-main);">指定時間:</span>
-            <input type="time" class="form-control" style="width: auto; flex:1;" value="${state.requestForm.specificTime}" onchange="updateSpecificTime(this.value)">
+          <label>5. 送迎頻度の指定</label>
+          <div class="frequency-toggle">
+            <button type="button" class="${state.requestForm.frequency === 'once' ? 'active' : ''}" onclick="changeFrequency('once')">都度 (単発)</button>
+            <button type="button" class="${state.requestForm.frequency === 'weekly' ? 'active' : ''}" onclick="changeFrequency('weekly')">週単位 (曜日)</button>
+            <button type="button" class="${state.requestForm.frequency === 'monthly' ? 'active' : ''}" onclick="changeFrequency('monthly')">月単位 (まとめ)</button>
           </div>
         </div>
+
+        ${state.requestForm.frequency === 'once' ? `
+          <div class="form-group fade-in">
+            <label>6. 送迎時間の指定（都度）</label>
+            <div style="display:flex; gap:12px; margin-bottom:12px;">
+              <button type="button" class="btn ${state.requestForm.timeType === 'Morning' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Morning')">朝 (送り)</button>
+              <button type="button" class="btn ${state.requestForm.timeType === 'Evening' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Evening')">夕 (迎え)</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-weight:500; font-size:0.9rem; color:var(--text-main);">指定時間:</span>
+              <input type="time" class="form-control" style="width: auto; flex:1;" value="${state.requestForm.specificTime}" onchange="updateSpecificTime(this.value)">
+            </div>
+          </div>
+        ` : ''}
+
+        ${state.requestForm.frequency === 'weekly' ? `
+          <div class="form-group fade-in">
+            <label>6. 送迎曜日の選択（週単位繰り返し）</label>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
+              毎週指定された曜日に定期的に送迎を行います（4週間換算で見積もり）。
+            </p>
+            <div class="day-selector">
+              ${['月', '火', 'w', '木', '金', '土', '日'].map((day, i) => {
+                const dayVal = i + 1; // 1:月 〜 7:日
+                const isActive = state.requestForm.weeklyDays.includes(dayVal);
+                const dispDay = day === 'w' ? '水' : day;
+                return `<button type="button" class="day-btn ${isActive ? 'active' : ''}" onclick="toggleWeeklyDay(${dayVal})">${dispDay}</button>`;
+              }).join('')}
+            </div>
+            <div style="display:flex; gap:12px; margin-top:16px; margin-bottom:12px;">
+              <button type="button" class="btn ${state.requestForm.timeType === 'Morning' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Morning')">朝 (送り)</button>
+              <button type="button" class="btn ${state.requestForm.timeType === 'Evening' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Evening')">夕 (迎え)</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-weight:500; font-size:0.9rem; color:var(--text-main);">指定時間:</span>
+              <input type="time" class="form-control" style="width: auto; flex:1;" value="${state.requestForm.specificTime}" onchange="updateSpecificTime(this.value)">
+            </div>
+          </div>
+        ` : ''}
+
+        ${state.requestForm.frequency === 'monthly' ? `
+          <div class="form-group fade-in">
+            <label>6. 月単位プランの選択</label>
+            <div class="frequency-toggle" style="margin-bottom: 12px;">
+              <button type="button" class="${state.requestForm.monthlyType === 'dates' ? 'active' : ''}" onclick="changeMonthlyType('dates')">日付指定 (まとめ)</button>
+              <button type="button" class="${state.requestForm.monthlyType === 'flat' ? 'active' : ''}" onclick="changeMonthlyType('flat')">安心月定額 (平日毎日)</button>
+            </div>
+
+            ${state.requestForm.monthlyType === 'dates' ? `
+              <div class="fade-in">
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
+                  カレンダーから希望する日付を選択してください。まとめ割（1回230円）が適用されます。
+                </p>
+                <div class="calendar-container">
+                  <div class="calendar-header">
+                    <span>2026年 8月</span>
+                    <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">翌月分の一括登録</span>
+                  </div>
+                  <div class="calendar-grid">
+                    ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday">${w}</div>`).join('')}
+                    <!-- 2026年8月1日は土曜日 -->
+                    <!-- 前月分余白(6日間) -->
+                    ${Array(6).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+                    <!-- 8月の日付(31日間) -->
+                    ${Array(31).fill(0).map((_, i) => {
+                      const dayVal = i + 1;
+                      const isActive = state.requestForm.monthlyDays.includes(dayVal);
+                      return `<div class="calendar-day ${isActive ? 'active' : ''}" onclick="toggleMonthlyDay(${dayVal})">${dayVal}</div>`;
+                    }).join('')}
+                    <!-- 翌月分余白(5日間) -->
+                    ${Array(5).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div class="card fade-in" style="background:#eef2ff; border-color:#c7d2fe; margin-top:12px; margin-bottom:12px; padding:12px 16px; box-shadow:none; cursor:default;">
+                <p style="font-weight:700; color:#312e81; font-size:0.9rem; margin-top:0; margin-bottom:4px;"><i class="ph-fill ph-sparkle" style="color:var(--primary)"></i> 月額使い放題プラン (¥3,980)</p>
+                <p style="font-size:0.8rem; color:#4338ca; margin-bottom:0; line-height:1.4;">
+                  1ヶ月間の平日すべて（月20回程度）でお迎えまたはお送りを代行します。都度のご決済も不要になる大変便利でお得なプランです。
+                </p>
+              </div>
+            `}
+
+            <div style="display:flex; gap:12px; margin-top:16px; margin-bottom:12px;">
+              <button type="button" class="btn ${state.requestForm.timeType === 'Morning' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Morning')">朝 (送り)</button>
+              <button type="button" class="btn ${state.requestForm.timeType === 'Evening' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Evening')">夕 (迎え)</button>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-weight:500; font-size:0.9rem; color:var(--text-main);">指定時間:</span>
+              <input type="time" class="form-control" style="width: auto; flex:1;" value="${state.requestForm.specificTime}" onchange="updateSpecificTime(this.value)">
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- 料金見積もりカード -->
+        <div class="estimation-card">
+          <div>
+            <div class="estimation-title">お見積もり合計額</div>
+            <div class="estimation-trips">
+              ${state.requestForm.frequency === 'once' ? '単発・都度送迎 (計1回)' : ''}
+              ${state.requestForm.frequency === 'weekly' ? `毎週 ${state.requestForm.weeklyDays.length}回指定 (4週分: 計${state.requestForm.estimatedTrips}回)` : ''}
+              ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? `日付指定 (計${state.requestForm.estimatedTrips}回・まとめ割)` : ''}
+              ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'flat' ? `安心月定額 (平日使い放題プラン)` : ''}
+            </div>
+          </div>
+          <div class="estimation-value">
+            <div class="estimation-price">¥${state.requestForm.estimatedPrice.toLocaleString()}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">(実費＋維持管理料込)</div>
+          </div>
+        </div>
+
 
         <button type="submit" class="btn btn-primary" style="margin-top:16px;">この内容で依頼する</button>
       </form>
@@ -518,12 +737,77 @@ function RequestFormView() {
 
 window.submitPayment = function(event, method = 'クレジットカード') {
   if(event) event.preventDefault();
-  alert(`【${method}】にて250円の決済が完了しました！送迎者とのマッチングを開始します。`);
+  const price = state.requestForm.estimatedPrice;
+  alert(`【${method}】にて${price.toLocaleString()}円の決済が完了しました！送迎者とのマッチングを開始します。`);
+  state.requestForm.isBooked = true; // 予約完了フラグ
   navigate('active');
 };
 
 function PaymentView() {
   const method = state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? 'おまかせ（自動割当）' : state.requestForm.selectedDriver;
+  const price = state.requestForm.estimatedPrice;
+  const trips = state.requestForm.estimatedTrips;
+  
+  let costItemBreakdown = '';
+  let planLabel = '';
+  
+  if (state.requestForm.frequency === 'once') {
+    planLabel = '単発・都度送迎（計1回分）';
+    costItemBreakdown = `
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+        <span>実費相当額（ガソリン代等 200円 × 1回）</span>
+        <span style="font-weight:600;">¥200</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+        <span>コミュニティ維持・安全管理料（50円 × 1回）</span>
+        <span>¥50</span>
+      </div>
+    `;
+  } else if (state.requestForm.frequency === 'weekly') {
+    const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
+    const selectedDays = state.requestForm.weeklyDays.map(d => dayNames[d - 1]).join('・');
+    planLabel = `週単位繰り返し [毎週 ${selectedDays}]（4週分・計${trips}回）`;
+    const jippi = trips * 200;
+    const kanri = trips * 50;
+    costItemBreakdown = `
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+        <span>実費相当額（ガソリン代等 200円 × ${trips}回）</span>
+        <span style="font-weight:600;">¥${jippi.toLocaleString()}</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+        <span>コミュニティ維持・安全管理料（50円 × ${trips}回）</span>
+        <span>¥${kanri.toLocaleString()}</span>
+      </div>
+    `;
+  } else if (state.requestForm.frequency === 'monthly') {
+    if (state.requestForm.monthlyType === 'dates') {
+      planLabel = `月単位日付指定（8月分・計${trips}回・まとめ割）`;
+      const jippi = trips * 190;
+      const kanri = trips * 40;
+      costItemBreakdown = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+          <span>実費相当額（まとめ割ガソリン代等 190円 × ${trips}回）</span>
+          <span style="font-weight:600;">¥${jippi.toLocaleString()}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+          <span>コミュニティ維持・安全管理料（割引40円 × ${trips}回）</span>
+          <span>¥${kanri.toLocaleString()}</span>
+        </div>
+      `;
+    } else {
+      planLabel = '安心月定額プラン（平日使い放題・月20回相当）';
+      costItemBreakdown = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+          <span>定額実費相当分（ガソリン代等の一括清算分）</span>
+          <span style="font-weight:600;">¥3,200</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+          <span>定額コミュニティ維持・安全管理料</span>
+          <span>¥780</span>
+        </div>
+      `;
+    }
+  }
   
   return `
     ${renderHeader('手数料決済と確認')}
@@ -531,27 +815,21 @@ function PaymentView() {
       <div class="card" style="margin-bottom: 24px; border: 2px solid var(--primary);">
         <h3 style="color:var(--primary); margin-top:0; text-align:center;">送迎料金のご確認</h3>
         <div style="font-size:2rem; font-weight:700; text-align:center; margin: 16px 0;">
-          ¥250 <span style="font-size:1rem; font-weight:400; color:var(--text-muted);">/ 1回</span>
+          ¥${price.toLocaleString()} <span style="font-size:0.9rem; font-weight:400; color:var(--text-muted);">${state.requestForm.frequency === 'once' ? '/ 1回' : '/ 期間合計'}</span>
         </div>
         
-        <div style="background:var(--background); padding:16px; border-radius:8px; margin-bottom:16px;">
-          <p style="font-weight:700; margin-top:0; margin-bottom:8px;">【料金の内訳】</p>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-            <span>実費相当額（ガソリン代等の実費）</span>
-            <span style="font-weight:600;">¥200</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-            <span>コミュニティ維持・安全管理料</span>
-            <span>¥50</span>
-          </div>
+        <div style="background:#f8fafc; padding:16px; border-radius:8px; margin-bottom:16px; border: 1px solid var(--border);">
+          <p style="font-weight:700; margin-top:0; margin-bottom:8px; font-size:0.95rem;">【料金の内訳】</p>
+          ${costItemBreakdown}
           <hr style="border:none; border-top:1px dashed #ccc; margin:12px 0;">
           <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.5;">
-            <p style="margin-top:0; font-weight:700; color:var(--primary); margin-bottom:4px;">【コミュニティ維持・安全管理料】</p>
+            <p style="margin-top:0; font-weight:700; color:var(--primary); margin-bottom:4px;">【コミュニティ維持・安全管理料について】</p>
             本サービスは、地域の助け合いを安全に行うためのプラットフォームです。利用料は、会員間の身元確認、24時間監視システム、専用保険の維持に充てられます。送迎協力者へは、過分な利益の発生しないガソリン代等の実費相当額のみが支払われます。
           </div>
         </div>
 
-        <div style="font-size:0.9rem;">
+        <div style="font-size:0.9rem; line-height:1.6; background:#fffbf5; padding:12px; border-radius:8px; border:1px solid #fee7c8;">
+          <strong>プラン:</strong> ${planLabel}<br>
           <strong>予定:</strong> ${state.requestForm.timeType === 'Morning' ? '朝' : '夕'} ${state.requestForm.specificTime}指定<br>
           <strong>対象施設:</strong> ${state.requestForm.kindergarten || '未選択'}<br>
           <strong>ご指名の送迎者:</strong> ${method}
@@ -559,7 +837,7 @@ function PaymentView() {
       </div>
 
       <div class="card" style="margin-bottom: 24px;">
-        <h3 style="margin-top:0; font-size:1.1rem; border-bottom:1px solid var(--background); padding-bottom:8px;">オンライン・QR決済</h3>
+        <h3 style="margin-top:0; font-size:1.1rem; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">オンライン・QR決済</h3>
         <div style="display:flex; flex-direction:column; gap:12px; margin-top:16px;">
           <button type="button" class="btn" style="background:#000; color:#fff;" onclick="submitPayment(event, 'Apple Pay')">
             <i class="ph-fill ph-apple-logo"></i> Apple Pay で支払う
@@ -577,14 +855,14 @@ function PaymentView() {
       </div>
 
       <div class="card" style="margin-bottom: 24px;">
-        <h3 style="margin-top:0; font-size:1.1rem; border-bottom:1px solid var(--background); padding-bottom:8px;">銀行振込・その他</h3>
+        <h3 style="margin-top:0; font-size:1.1rem; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">銀行振込・その他</h3>
         <button type="button" class="btn btn-outline" style="border-color:#555; color:#555; margin-top:12px;" onclick="submitPayment(event, '銀行振込')">
           <i class="ph ph-bank"></i> 銀行振込で支払う（後払い）
         </button>
       </div>
 
       <form onsubmit="submitPayment(event, 'クレジットカード')" class="card">
-        <h3 style="margin-top:0; font-size:1.1rem; border-bottom:1px solid var(--background); padding-bottom:8px;">クレジットカード決済</h3>
+        <h3 style="margin-top:0; font-size:1.1rem; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">クレジットカード決済</h3>
         
         <div class="form-group">
           <label>カード番号</label>
@@ -603,7 +881,7 @@ function PaymentView() {
         </div>
 
         <button type="submit" class="btn btn-primary" style="margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
-          <i class="ph ph-credit-card"></i> 250円を支払って依頼を確定する
+          <i class="ph ph-credit-card"></i> ¥${price.toLocaleString()} を支払って依頼を確定する
         </button>
         <button type="button" class="btn btn-outline" style="margin-top:8px;" onclick="navigate('request')">依頼内容を修正する</button>
       </form>
