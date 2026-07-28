@@ -12,6 +12,7 @@ const state = {
     weeklyDays: [], // 選択された曜日 [1, 2, 3, 4, 5, 6, 0] (1:月〜7:日)
     monthlyType: 'dates', // 'dates' (日付指定), 'flat' (月定額)
     monthlyDays: [], // 選択された日付 [1, 2, 3...]
+    onceDate: null, // 選択された単発の日付
     estimatedPrice: 250,
     estimatedTrips: 1
   }
@@ -376,13 +377,19 @@ function DashboardView() {
   `).join('');
 
   let activePlanHtml = '';
-  if (state.requestForm.isBooked && state.requestForm.frequency !== 'once') {
+  if (state.requestForm.isBooked) {
     let detailText = '';
-    if (state.requestForm.frequency === 'weekly') {
+    let titleText = '';
+    if (state.requestForm.frequency === 'once') {
+      titleText = '確定済みの送迎依頼（単発）';
+      detailText = `単発・都度送迎 (8月${state.requestForm.onceDate}日) ${state.requestForm.specificTime}指定 お迎え・お送り`;
+    } else if (state.requestForm.frequency === 'weekly') {
+      titleText = '契約中の定期プラン（週単位）';
       const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
       const selectedDays = state.requestForm.weeklyDays.map(d => dayNames[d - 1]).join('・');
       detailText = `毎週 [${selectedDays}] ${state.requestForm.specificTime}指定 お送り・お迎え`;
     } else if (state.requestForm.frequency === 'monthly') {
+      titleText = '契約中の定期プラン（月単位）';
       if (state.requestForm.monthlyType === 'dates') {
         detailText = `月単位日付指定 (計 ${state.requestForm.estimatedTrips}回) ${state.requestForm.specificTime}指定`;
       } else {
@@ -390,19 +397,63 @@ function DashboardView() {
       }
     }
     
+    // 2026年8月のカレンダーを生成 (1日は土曜日、前月分余白6日、当月31日、翌月分余白5日、計42マス)
+    let calendarDaysHtml = '';
+    for (let i = 0; i < 6; i++) {
+      calendarDaysHtml += '<div class="calendar-day muted"></div>';
+    }
+    for (let d = 1; d <= 31; d++) {
+      // 曜日を計算 (0:日、1:月、...、6:土)
+      const w = (d + 5) % 7; 
+      const dayOfWeekVal = w === 0 ? 7 : w; // 1:月〜7:日
+      
+      let isSelected = false;
+      if (state.requestForm.frequency === 'once') {
+        isSelected = (state.requestForm.onceDate === d);
+      } else if (state.requestForm.frequency === 'weekly') {
+        isSelected = state.requestForm.weeklyDays.includes(dayOfWeekVal);
+      } else if (state.requestForm.frequency === 'monthly') {
+        if (state.requestForm.monthlyType === 'dates') {
+          isSelected = state.requestForm.monthlyDays.includes(d);
+        } else {
+          // 平日のみ
+          isSelected = (dayOfWeekVal >= 1 && dayOfWeekVal <= 5);
+        }
+      }
+      
+      const selectedClass = isSelected ? 'day-parent-selected' : '';
+      calendarDaysHtml += `<div class="calendar-day ${selectedClass}" style="cursor: default; pointer-events: none;">${d}</div>`;
+    }
+    for (let i = 0; i < 5; i++) {
+      calendarDaysHtml += '<div class="calendar-day muted"></div>';
+    }
+    
     activePlanHtml = `
       <div class="card" style="border: 2px solid var(--secondary); background: #f0fdf4; margin-bottom: 20px; box-shadow: none; cursor: default;">
         <h3 style="color: var(--secondary); margin-top: 0; display: flex; align-items: center; gap: 6px; font-size: 1.05rem;">
-          <i class="ph-fill ph-check-circle" style="font-size: 1.2rem;"></i> 契約中の定期プラン
+          <i class="ph-fill ph-check-circle" style="font-size: 1.2rem;"></i> ${titleText}
         </h3>
         <p style="font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; color: var(--text-main); margin-top: 8px;">
           対象施設: ${state.requestForm.kindergarten || '三鷹市立大沢保育園'}
         </p>
-        <p style="font-size: 0.8rem; margin-bottom: 0; color: var(--text-muted); line-height: 1.4;">
+        <p style="font-size: 0.8rem; margin-bottom: 12px; color: var(--text-muted); line-height: 1.4;">
           <strong>プラン内容:</strong> ${detailText}<br>
           <strong>待ち合わせ:</strong> ${state.requestForm.location || '指定場所'}<br>
           <strong>担当予定:</strong> ${state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? 'おまかせ（自動割当）' : state.requestForm.selectedDriver}
         </p>
+        
+        <!-- 日程カレンダー表示 -->
+        <div style="border-top: 1px dashed #c2f5d3; padding-top: 12px; margin-top: 12px;">
+          <div style="font-size:0.8rem; font-weight:700; color:var(--text-main); margin-bottom:8px; display:flex; align-items:center; gap:4px;">
+            <i class="ph ph-calendar-check" style="color:var(--secondary);"></i> 8月の送迎予定カレンダー
+          </div>
+          <div class="calendar-container" style="padding: 8px; box-shadow: none; border-color: #c2f5d3; background: #fafdfb; margin-top: 4px;">
+            <div class="calendar-grid">
+              ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday" style="font-size:0.7rem; padding-bottom:4px;">${w}</div>`).join('')}
+              ${calendarDaysHtml}
+            </div>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -527,10 +578,20 @@ window.toggleMonthlyDay = function(day) {
   window.calculateEstimation();
   render();
 };
+
+window.selectOnceDay = function(day) {
+  state.requestForm.onceDate = day;
+  render();
+};
+
 window.submitRequest = function(event) {
   event.preventDefault();
 
   // バリデーション
+  if (state.requestForm.frequency === 'once' && !state.requestForm.onceDate) {
+    alert('送迎を希望する日付を選択してください。');
+    return;
+  }
   if (state.requestForm.frequency === 'weekly' && state.requestForm.weeklyDays.length === 0) {
     alert('送迎を希望する曜日を1つ以上選択してください。');
     return;
@@ -619,7 +680,25 @@ function RequestFormView() {
 
         ${state.requestForm.frequency === 'once' ? `
           <div class="form-group fade-in">
-            <label>6. 送迎時間の指定（都度）</label>
+            <label>6. 送迎日の指定（カレンダーから1日選択）</label>
+            <div class="calendar-container" style="margin-bottom:16px;">
+              <div class="calendar-header">
+                <span>2026年 8月</span>
+                <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">単発の日付をタップして選択してください</span>
+              </div>
+              <div class="calendar-grid">
+                ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday">${w}</div>`).join('')}
+                ${Array(6).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+                ${Array(31).fill(0).map((_, i) => {
+                  const dayVal = i + 1;
+                  const isActive = state.requestForm.onceDate === dayVal;
+                  return `<div class="calendar-day ${isActive ? 'active' : ''}" onclick="selectOnceDay(${dayVal})">${dayVal}</div>`;
+                }).join('')}
+                ${Array(5).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+              </div>
+            </div>
+            
+            <label>7. 送迎時間の指定（都度）</label>
             <div style="display:flex; gap:12px; margin-bottom:12px;">
               <button type="button" class="btn ${state.requestForm.timeType === 'Morning' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Morning')">朝 (送り)</button>
               <button type="button" class="btn ${state.requestForm.timeType === 'Evening' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Evening')">夕 (迎え)</button>
@@ -637,7 +716,7 @@ function RequestFormView() {
             <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px;">
               毎週指定された曜日に定期的に送迎を行います（4週間換算で見積もり）。
             </p>
-            <div class="day-selector">
+            <div class="day-selector" style="margin-bottom:16px;">
               ${['月', '火', 'w', '木', '金', '土', '日'].map((day, i) => {
                 const dayVal = i + 1; // 1:月 〜 7:日
                 const isActive = state.requestForm.weeklyDays.includes(dayVal);
@@ -645,6 +724,28 @@ function RequestFormView() {
                 return `<button type="button" class="day-btn ${isActive ? 'active' : ''}" onclick="toggleWeeklyDay(${dayVal})">${dispDay}</button>`;
               }).join('')}
             </div>
+
+            <!-- 自動ハイライト用カレンダー (表示専用) -->
+            <div class="calendar-container" style="margin-bottom:16px; background-color:#fafafb; border-color:#e2e8f0;">
+              <div class="calendar-header">
+                <span>2026年 8月 送迎日程（プレビュー）</span>
+                <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">選択した曜日が自動でハイライトされます</span>
+              </div>
+              <div class="calendar-grid">
+                ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday">${w}</div>`).join('')}
+                ${Array(6).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+                ${Array(31).fill(0).map((_, i) => {
+                  const dayVal = i + 1;
+                  const w = (dayVal + 5) % 7;
+                  const dayOfWeekVal = w === 0 ? 7 : w; // 1:月〜7:日
+                  const isActive = state.requestForm.weeklyDays.includes(dayOfWeekVal);
+                  const selectedClass = isActive ? 'day-parent-selected' : '';
+                  return `<div class="calendar-day ${selectedClass}" style="cursor: default; pointer-events: none;">${dayVal}</div>`;
+                }).join('')}
+                ${Array(5).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+              </div>
+            </div>
+
             <div style="display:flex; gap:12px; margin-top:16px; margin-bottom:12px;">
               <button type="button" class="btn ${state.requestForm.timeType === 'Morning' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Morning')">朝 (送り)</button>
               <button type="button" class="btn ${state.requestForm.timeType === 'Evening' ? 'btn-primary' : 'btn-outline'}" onclick="selectTimeType('Evening')">夕 (迎え)</button>
@@ -696,6 +797,27 @@ function RequestFormView() {
                 <p style="font-size:0.8rem; color:#4338ca; margin-bottom:0; line-height:1.4;">
                   1ヶ月間の平日すべて（月20回程度）でお迎えまたはお送りを代行します。都度のご決済も不要になる大変便利でお得なプランです。
                 </p>
+              </div>
+
+              <!-- 月定額用の平日毎日自動ハイライトカレンダー (表示専用) -->
+              <div class="calendar-container fade-in" style="margin-bottom:16px; background-color:#fafafb; border-color:#e2e8f0;">
+                <div class="calendar-header">
+                  <span>2026年 8月 送迎日程（プレビュー）</span>
+                  <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">平日（月〜金）がすべて対象日となります</span>
+                </div>
+                <div class="calendar-grid">
+                  ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday">${w}</div>`).join('')}
+                  ${Array(6).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+                  ${Array(31).fill(0).map((_, i) => {
+                    const dayVal = i + 1;
+                    const w = (dayVal + 5) % 7;
+                    const dayOfWeekVal = w === 0 ? 7 : w; // 1:月〜7:日
+                    const isWeekday = dayOfWeekVal >= 1 && dayOfWeekVal <= 5;
+                    const selectedClass = isWeekday ? 'day-parent-selected' : '';
+                    return `<div class="calendar-day ${selectedClass}" style="cursor: default; pointer-events: none;">${dayVal}</div>`;
+                  }).join('')}
+                  ${Array(5).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+                </div>
               </div>
             `}
 
@@ -752,7 +874,7 @@ function PaymentView() {
   let planLabel = '';
   
   if (state.requestForm.frequency === 'once') {
-    planLabel = '単発・都度送迎（計1回分）';
+    planLabel = state.requestForm.onceDate ? `単発・都度送迎（8月${state.requestForm.onceDate}日・計1回分）` : '単発・都度送迎（計1回分）';
     costItemBreakdown = `
       <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
         <span>実費相当額（ガソリン代等 200円 × 1回）</span>
@@ -1102,6 +1224,54 @@ function DriverDashboardView() {
         <div style="font-size:0.95rem; margin-bottom:6px; font-weight:600;"><i class="ph ph-map-pin" style="color:var(--primary)"></i> 迎：三鷹市立大沢保育園</div>
         <div style="font-size:0.95rem; margin-bottom:16px;"><i class="ph ph-house" style="color:var(--text-muted)"></i> 送：三鷹台マンション前</div>
         <button class="btn btn-primary" onclick="navigate('active')">送迎ステータスを開始する（モック）</button>
+      </div>
+
+      <!-- 送迎者 稼働スケジュール設定用カレンダー -->
+      <div class="card" style="margin-bottom:24px;">
+        <h3 style="margin-top:0; font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:8px; display:flex; align-items:center; gap:8px;">
+          <i class="ph ph-calendar-plus" style="color:var(--primary);"></i> 稼働スケジュールの設定（8月）
+        </h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px; line-height:1.4;">
+          送迎が可能な日（稼働可能日）をカレンダー上でタップして設定してください。
+        </p>
+        <div style="display:flex; gap:16px; margin-bottom:12px; font-size:0.75rem; justify-content:center;">
+          <div style="display:flex; align-items:center; gap:4px;">
+            <div style="width:14px; height:14px; background:rgba(16,185,129,0.1); border:1px solid var(--secondary); border-radius:4px;"></div>
+            <span>稼働可能</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <div style="width:14px; height:14px; background:var(--primary); border-radius:4px; position:relative;">
+              <span style="font-size:0.4rem; color:white; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);">★</span>
+            </div>
+            <span>送迎担当確定</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:4px;">
+            <div style="width:14px; height:14px; background:white; border:1px solid var(--border); border-radius:4px;"></div>
+            <span>稼働不可・未設定</span>
+          </div>
+        </div>
+        
+        <div class="calendar-container" style="padding: 8px; box-shadow: none; margin-top: 4px;">
+          <div class="calendar-grid">
+            ${['日', '月', '火', '水', '木', '金', '土'].map(w => `<div class="calendar-weekday" style="font-size:0.7rem; padding-bottom:4px;">${w}</div>`).join('')}
+            ${Array(6).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+            ${Array(31).fill(0).map((_, i) => {
+              const dayVal = i + 1;
+              const isAssigned = state.driverSchedule.assignedDays.includes(dayVal);
+              const isAvailable = state.driverSchedule.availableDays.includes(dayVal);
+              
+              let dayClass = '';
+              if (isAssigned) {
+                dayClass = 'day-assigned';
+              } else if (isAvailable) {
+                dayClass = 'day-available';
+              }
+              
+              return `<div class="calendar-day ${dayClass}" onclick="toggleDriverAvailability(${dayVal})">${dayVal}</div>`;
+            }).join('')}
+            ${Array(5).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
+          </div>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:24px;">

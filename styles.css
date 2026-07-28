@@ -536,3 +536,30 @@ p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 16px; }
   margin-top: 2px;
 }
 
+.calendar-day.day-parent-selected {
+  background: var(--secondary) !important;
+  color: white !important;
+  font-weight: 700;
+}
+.calendar-day.day-available {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: var(--secondary) !important;
+  border: 1px solid var(--secondary) !important;
+  font-weight: 700;
+}
+.calendar-day.day-assigned {
+  background: var(--primary) !important;
+  color: white !important;
+  font-weight: 700;
+  position: relative;
+}
+.calendar-day.day-assigned::after {
+  content: "★";
+  font-size: 0.55rem;
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  color: #facc15;
+}
+
+
