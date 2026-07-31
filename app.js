@@ -1,4 +1,23 @@
-// State management
+// Firebase 接続用ダミー設定 (本番環境接続キーといつでも差し替え可能)
+const firebaseConfig = {
+  apiKey: "DUMMY_API_KEY_FOR_LOCAL_MOCK_TESTING",
+  authDomain: "kids-ride-app.firebaseapp.com",
+  projectId: "kids-ride-app",
+  storageBucket: "kids-ride-app.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef123456"
+};
+
+// Firebaseのモック/本番切り替えロジック
+const useRealFirebase = false; // 本番環境接続時は true に変更
+if (useRealFirebase) {
+  // firebase.initializeApp(firebaseConfig);
+  // const db = firebase.firestore();
+} else {
+  console.log("[Firebase Mock] Firebase initialized with dummy config:", firebaseConfig);
+}
+
+// 状態管理 (State management)
 const state = {
   currentRoute: 'login',
   isAuthenticated: localStorage.getItem('kidsride_demo_auth') === 'true',
@@ -9,13 +28,202 @@ const state = {
     specificTime: '07:00',
     selectedDriver: 'おまかせ（自動マッチング）',
     frequency: 'once', // 'once' (都度), 'weekly' (週単位), 'monthly' (月単位)
-    weeklyDays: [], // 選択された曜日 [1, 2, 3, 4, 5, 6, 0] (1:月〜7:日)
+    weeklyDays: [], // 選択された曜日 [1, 2, 3, 4, 5, 6, 7] (1:月〜7:日)
     monthlyType: 'dates', // 'dates' (日付指定), 'flat' (月定額)
-    monthlyDays: [], // 選択された日付 [1, 2, 3...]
+    monthlyDays: [], // 選択された日付
     onceDate: null, // 選択された単発の日付
-    estimatedPrice: 250,
-    estimatedTrips: 1
+    estimatedPrice: 100, // 初期化
+    estimatedPoints: 0,  // ポイント見積もり
+    estimatedTrips: 1,
+    distanceKm: 2.5,     // 距離 (km)
+    oneTripPrice: 100,   // 1回あたりの料金
+    isBooked: false
+  },
+  // GPSリアルタイム追跡の状態管理
+  activeRide: {
+    status: 'idle', // 'idle' (待機), 'riding' (送迎中), 'completed' (完了)
+    transportMethod: 'Car', // 'Car' (車・バイク) または 'Bicycle' (徒歩・自転車)
+    currentLocation: null, // { lat, lng }
+    routePoints: [],       // 走行予定ルートの座標リスト
+    currentIndex: 0,       // 現在位置のインデックス
+    intervalId: null       // GPS送信シミュレーターのタイマーID
+  },
+  driverSchedule: {
+    availableDays: [3, 4, 5, 10, 11, 12, 17, 18, 19, 24, 25, 26],
+    assignedDays: [11]
   }
+};
+
+// 三鷹市内の座標マップデータ (Leaflet地図用)
+const coordinatesMap = {
+  "三鷹市立あゆみ保育園": { lat: 35.6765, lng: 139.5620 },
+  "三鷹市立上連雀保育園": { lat: 35.6896, lng: 139.5492 },
+  "三鷹市立大沢保育園": { lat: 35.6791, lng: 139.5312 },
+  "三鷹市立牟礼保育園": { lat: 35.6881, lng: 139.5855 },
+  "三鷹台保育園": { lat: 35.6945, lng: 139.5982 },
+  "明泉幼稚園": { lat: 35.6820, lng: 139.5750 },
+  "下連雀3丁目": { lat: 35.6934, lng: 139.5620 }, // 大沢から約3.2kmの位置
+  "自宅（デフォルト）": { lat: 35.6920, lng: 139.5930 } // 三鷹台マンション付近
+};
+
+// 地球上の2点間の距離を計算する関数 (ハバース公式)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // 地球の半径 (km)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// ルート経由点 (routePoints) の生成 (直線補間)
+function generateRoutePoints(start, end, steps = 12) {
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    points.push({
+      lat: start.lat + (end.lat - start.lat) * t,
+      lng: start.lng + (end.lng - start.lng) * t
+    });
+  }
+  return points;
+}
+
+// GPS 送信シミュレーターのロジック
+window.startGpsSimulation = function() {
+  const ride = state.activeRide;
+  if (ride.intervalId) {
+    clearInterval(ride.intervalId);
+  }
+  
+  const startCoord = coordinatesMap[state.requestForm.kindergarten] || coordinatesMap["三鷹市立大沢保育園"];
+  const destCoord = coordinatesMap[state.requestForm.location] || coordinatesMap["自宅（デフォルト）"];
+  
+  // 送迎手段の判定
+  const selectedDriverName = state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? '佐藤 カズヤ' : state.requestForm.selectedDriver;
+  const currentDriver = driversList.find(d => d.name === selectedDriverName) || driversList[1];
+  const isCar = (currentDriver.methodType === 'Car' || currentDriver.methodType === 'Motorcycle' || currentDriver.methodType === 'Unknown');
+  
+  ride.status = 'riding';
+  ride.transportMethod = isCar ? 'Car' : 'Bicycle';
+  ride.routePoints = generateRoutePoints(startCoord, destCoord, 12); // 12ステップで移動
+  ride.currentIndex = 0;
+  ride.currentLocation = ride.routePoints[0];
+  
+  const intervalSec = isCar ? 10 : 15; // 車なら10秒、自転車・徒歩なら15秒
+  
+  ride.intervalId = setInterval(() => {
+    window.simulateGpsStep();
+  }, intervalSec * 1000);
+  
+  render();
+};
+
+window.simulateGpsStep = function() {
+  const ride = state.activeRide;
+  if (ride.status !== 'riding' || !ride.routePoints || ride.routePoints.length === 0) return;
+  
+  const oldLoc = ride.currentLocation;
+  ride.currentIndex++;
+  
+  if (ride.currentIndex >= ride.routePoints.length) {
+    // 目的地に到着 (完了)
+    window.stopGpsSimulation(false);
+    ride.status = 'completed';
+    ride.currentLocation = ride.routePoints[ride.routePoints.length - 1];
+    
+    // 実績サマリーを更新
+    if (state.requestForm.isBooked) {
+      alert("目的地に到着しました。送迎完了です！");
+    }
+    render();
+  } else {
+    ride.currentLocation = ride.routePoints[ride.currentIndex];
+    
+    // 画面全体を再描画するとLeafletがリセットされるため、DOMとマーカーの位置を直接更新する
+    window.updateGpsPositionOnUi(oldLoc, ride.currentLocation);
+  }
+};
+
+window.stopGpsSimulation = function(isPause = false) {
+  const ride = state.activeRide;
+  if (ride.intervalId) {
+    clearInterval(ride.intervalId);
+    ride.intervalId = null;
+  }
+  if (isPause) {
+    alert("GPS信号の送信を一時停止しました。");
+    render();
+  }
+};
+
+window.resetGpsSimulation = function() {
+  const ride = state.activeRide;
+  window.stopGpsSimulation(false);
+  ride.status = 'idle';
+  ride.currentIndex = 0;
+  ride.currentLocation = null;
+  ride.routePoints = [];
+  render();
+};
+
+// UIと地図を直接更新する関数 (チラつき防止)
+window.updateGpsPositionOnUi = function(oldLoc, newLoc) {
+  const ride = state.activeRide;
+  if (!oldLoc || !newLoc) return;
+  
+  // 1. マーカーの滑らかなアニメーション移動
+  if (window.driverMarker) {
+    window.transitionMarker(window.driverMarker, oldLoc, newLoc, 2000);
+  }
+  
+  // 2. 残り距離のテキスト更新
+  const distEl = document.getElementById('tracking-distance-left');
+  if (distEl) {
+    const destCoord = coordinatesMap[state.requestForm.location] || coordinatesMap["自宅（デフォルト）"];
+    const dist = calculateDistance(newLoc.lat, newLoc.lng, destCoord.lat, destCoord.lng);
+    distEl.innerText = `${Math.round(dist * 10) / 10} km`;
+  }
+  
+  // 3. 送迎者画面の進捗プログレスバーの更新
+  const progressPercent = (ride.currentIndex / (ride.routePoints.length - 1)) * 100;
+  const progressBar = document.getElementById('driver-progress-bar-fill');
+  if (progressBar) {
+    progressBar.style.width = `${progressPercent}%`;
+  }
+  
+  // 送迎者画面の残り時間テキストの更新
+  const intervalSec = ride.transportMethod === 'Car' ? 10 : 15;
+  const timeEl = document.getElementById('driver-time-left');
+  if (timeEl) {
+    const remainingSteps = ride.routePoints.length - 1 - ride.currentIndex;
+    const minutesLeft = Math.round(remainingSteps * (intervalSec / 6)) / 10;
+    timeEl.innerText = `残り約 ${minutesLeft} 分`;
+  }
+};
+
+// マーカーのアニメーションスライド補間
+window.transitionMarker = function(marker, startLatLng, endLatLng, duration = 2000) {
+  const startTime = performance.now();
+  function animate(time) {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // イージング (ease-in-out)
+    const t = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
+    
+    const lat = startLatLng.lat + (endLatLng.lat - startLatLng.lat) * t;
+    const lng = startLatLng.lng + (endLatLng.lng - startLatLng.lng) * t;
+    
+    marker.setLatLng([lat, lng]);
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    }
+  }
+  requestAnimationFrame(animate);
 };
 
 // Router
@@ -504,6 +712,7 @@ window.toggleOtherInput = function(selectElem, targetId) {
 
 window.updateDriver = function(val) {
   state.requestForm.selectedDriver = val;
+  window.calculateEstimation();
   render();
 };
 window.selectTimeType = function(timeType) {
@@ -519,26 +728,105 @@ window.updateSpecificTime = function(val) {
   state.requestForm.specificTime = val;
 };
 
+// 幼稚園・保育園の選択変更時のイベントハンドラ
+window.changeKindergarten = function(val) {
+  const otherInput = document.getElementById('request-other-kg');
+  if (val === 'その他（自由記入）') {
+    if (otherInput) {
+      otherInput.style.display = 'block';
+      otherInput.focus();
+    }
+    state.requestForm.kindergarten = otherInput ? otherInput.value : '';
+  } else {
+    if (otherInput) {
+      otherInput.style.display = 'none';
+      otherInput.value = '';
+    }
+    state.requestForm.kindergarten = val;
+  }
+  window.calculateEstimation();
+  render();
+};
+
+// その他幼稚園の自由記述入力時のイベントハンドラ
+window.changeOtherKindergarten = function(val) {
+  state.requestForm.kindergarten = val;
+  window.calculateEstimation();
+};
+
+// 待ち合わせ場所（目的地）の選択変更時のイベントハンドラ
+window.changeLocation = function(val) {
+  state.requestForm.location = val;
+  window.calculateEstimation();
+  render();
+};
+
 // 繰り返し設定と料金見積もり計算用の関数
 window.calculateEstimation = function() {
   const form = state.requestForm;
+  
+  // 1. 出発地と目的地の距離 (distanceKm) を動的計算
+  const startCoord = coordinatesMap[form.kindergarten];
+  const destCoord = coordinatesMap[form.location] || coordinatesMap["自宅（デフォルト）"];
+  
+  if (startCoord && destCoord) {
+    form.distanceKm = calculateDistance(startCoord.lat, startCoord.lng, destCoord.lat, destCoord.lng);
+  } else {
+    form.distanceKm = 2.5; // 座標未特定時のデフォルト値
+  }
+  // 小数点第1位に四捨五入
+  form.distanceKm = Math.round(form.distanceKm * 10) / 10;
+  
+  // 2. 選択された送迎パートナーの移動手段を特定 (車・バイクか、徒歩・自転車か)
+  const currentDriver = driversList.find(d => d.name === form.selectedDriver) || driversList[0];
+  const isCar = (currentDriver.methodType === 'Car' || currentDriver.methodType === 'Motorcycle' || currentDriver.methodType === 'Unknown');
+  
+  // 3. 送迎回数のカウント
   if (form.frequency === 'once') {
     form.estimatedTrips = 1;
-    form.estimatedPrice = 250;
   } else if (form.frequency === 'weekly') {
-    // 週あたりの選択曜日数 × 4週間分として計算
     const tripsPerWeek = form.weeklyDays.length;
     form.estimatedTrips = tripsPerWeek * 4;
-    form.estimatedPrice = form.estimatedTrips * 250;
   } else if (form.frequency === 'monthly') {
     if (form.monthlyType === 'dates') {
-      // 日付指定まとめ：選択した日数。まとめ割引で1回230円を適用
       form.estimatedTrips = form.monthlyDays.length;
-      form.estimatedPrice = form.estimatedTrips * 230;
     } else {
-      // 月定額：平日使い放題（想定20回）で一律3,980円
-      form.estimatedTrips = 20;
+      form.estimatedTrips = 20; // 平日毎日 (安心月定額プラン)
+    }
+  }
+  
+  // 4. 現金請求額とポイント消費額の計算
+  if (isCar) {
+    // 【車・バイクの場合】
+    if (form.frequency === 'monthly' && form.monthlyType === 'flat') {
+      // 安心月定額プラン
       form.estimatedPrice = 3980;
+      form.estimatedPoints = 0;
+      form.oneTripPrice = Math.round(3980 / 20);
+    } else {
+      // 通常プラン：ガソリン実費（1kmあたり20円） ＋ コミュニティ維持料
+      // 月単位日付指定(まとめ割)の場合は、維持料を40円に割引
+      const isDiscount = (form.frequency === 'monthly' && form.monthlyType === 'dates');
+      const gasFee = Math.round(form.distanceKm * 20);
+      const systemFee = isDiscount ? 40 : 50;
+      form.oneTripPrice = gasFee + systemFee;
+      form.estimatedPrice = form.oneTripPrice * form.estimatedTrips;
+      form.estimatedPoints = 0;
+    }
+  } else {
+    // 【徒歩・自転車の場合】
+    if (form.frequency === 'monthly' && form.monthlyType === 'flat') {
+      // 安心月定額プラン：現金1000円＋4000pt
+      form.estimatedPrice = 1000;
+      form.estimatedPoints = 4000;
+      form.oneTripPrice = Math.round(1000 / 20);
+    } else {
+      // 通常プラン：現金はシステム維持料のみ（割引時40円、通常50円）、ポイントは1回200pt
+      const isDiscount = (form.frequency === 'monthly' && form.monthlyType === 'dates');
+      const systemFee = isDiscount ? 40 : 50;
+      form.oneTripPrice = systemFee;
+      form.estimatedPrice = systemFee * form.estimatedTrips;
+      form.estimatedPoints = 200 * form.estimatedTrips;
     }
   }
 };
@@ -633,25 +921,30 @@ window.submitRequest = function(event) {
 };
 
 function RequestFormView() {
-  const options = kindergartens.map(k => `<option value="${k}">${k}</option>`).join('');
   const currentDriverInfo = driversList.find(d => d.name === state.requestForm.selectedDriver) || driversList[0];
+  const isOtherKg = kindergartens.indexOf(state.requestForm.kindergarten) === -1 && state.requestForm.kindergarten !== '';
   
+  // 移動手段の判定 (車・バイクか、徒歩・自転車か)
+  const isCar = (currentDriverInfo.methodType === 'Car' || currentDriverInfo.methodType === 'Motorcycle' || currentDriverInfo.methodType === 'Unknown');
+
   return `
     ${renderHeader('送迎を依頼する')}
     <main class="fade-in">
       <form onsubmit="submitRequest(event)">
         <div class="form-group">
           <label>1. 三鷹市内の幼稚園・保育園を選択</label>
-          <select id="kindergarten-select" class="form-control" onchange="window.toggleOtherInput(this, 'request-other-kg')">
+          <select id="kindergarten-select" class="form-control" onchange="window.changeKindergarten(this.value)">
             <option value="">選択してください</option>
-            ${options}
+            ${kindergartens.map(k => `
+              <option value="${k}" ${state.requestForm.kindergarten === k ? 'selected' : (k === 'その他（自由記入）' && isOtherKg ? 'selected' : '')}>${k}</option>
+            `).join('')}
           </select>
-          <input type="text" id="request-other-kg" class="form-control" placeholder="施設名をご記入ください" style="display:none; margin-top:8px;">
+          <input type="text" id="request-other-kg" class="form-control" placeholder="施設名をご記入ください" style="display:${isOtherKg ? 'block' : 'none'}; margin-top:8px;" value="${isOtherKg ? state.requestForm.kindergarten : ''}" onchange="window.changeOtherKindergarten(this.value)">
         </div>
 
         <div class="form-group">
           <label>2. 待ち合わせ場所</label>
-          <input type="text" id="location-input" class="form-control" placeholder="例: 自宅マンションエントランス" value="${state.requestForm.location}">
+          <input type="text" id="location-input" class="form-control" placeholder="例: 自宅マンションエントランス" value="${state.requestForm.location}" onchange="window.changeLocation(this.value)">
         </div>
 
         <div class="form-group">
@@ -833,22 +1126,57 @@ function RequestFormView() {
         ` : ''}
 
         <!-- 料金見積もりカード -->
-        <div class="estimation-card">
-          <div>
-            <div class="estimation-title">お見積もり合計額</div>
-            <div class="estimation-trips">
-              ${state.requestForm.frequency === 'once' ? '単発・都度送迎 (計1回)' : ''}
-              ${state.requestForm.frequency === 'weekly' ? `毎週 ${state.requestForm.weeklyDays.length}回指定 (4週分: 計${state.requestForm.estimatedTrips}回)` : ''}
-              ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? `日付指定 (計${state.requestForm.estimatedTrips}回・まとめ割)` : ''}
-              ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'flat' ? `安心月定額 (平日使い放題プラン)` : ''}
+        <div class="estimation-card" style="display:flex; flex-direction:column; gap:8px; padding:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+            <div>
+              <div class="estimation-title">お見積もり合計額</div>
+              <div class="estimation-trips">
+                ${state.requestForm.frequency === 'once' ? '単発・都度送迎 (計1回)' : ''}
+                ${state.requestForm.frequency === 'weekly' ? `毎週 ${state.requestForm.weeklyDays.length}回指定 (4週分: 計${state.requestForm.estimatedTrips}回)` : ''}
+                ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? `日付指定 (計${state.requestForm.estimatedTrips}回・まとめ割)` : ''}
+                ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'flat' ? `安心月定額 (平日使い放題プラン)` : ''}
+              </div>
+            </div>
+            <div class="estimation-value" style="text-align:right;">
+              <div class="estimation-price">¥${state.requestForm.estimatedPrice.toLocaleString()}</div>
+              ${state.requestForm.estimatedPoints > 0 ? `
+                <div style="font-size:0.85rem; font-weight:700; color:var(--secondary); margin-top:2px;">+ ${state.requestForm.estimatedPoints.toLocaleString()} pt</div>
+              ` : ''}
+              <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">(実費＋維持管理料込)</div>
             </div>
           </div>
-          <div class="estimation-value">
-            <div class="estimation-price">¥${state.requestForm.estimatedPrice.toLocaleString()}</div>
-            <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">(実費＋維持管理料込)</div>
+          
+          <!-- 料金詳細内訳の表示 -->
+          <div style="border-top:1px dashed #e2e8f0; padding-top:8px; width:100%; font-size:0.75rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between;">
+              <span>送迎手段:</span>
+              <strong style="color:var(--text-main);">${currentDriverInfo.method}</strong>
+            </div>
+            ${isCar ? `
+              <div style="display:flex; justify-content:space-between;">
+                <span>片道距離 (直線換算):</span>
+                <strong>約 ${state.requestForm.distanceKm || 2.5} km</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>ガソリン代実費 (1回あたり):</span>
+                <strong>約 ¥${Math.round((state.requestForm.distanceKm || 2.5) * 20)}</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>システム利用料 (1回あたり):</span>
+                <strong>¥${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? 40 : 50}</strong>
+              </div>
+            ` : `
+              <div style="display:flex; justify-content:space-between;">
+                <span>必要ポイント (1回あたり):</span>
+                <strong style="color:var(--secondary);">200 pt</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span>システム利用料 (1回あたり):</span>
+                <strong>¥${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? 40 : 50}</strong>
+              </div>
+            `}
           </div>
         </div>
-
 
         <button type="submit" class="btn btn-primary" style="margin-top:16px;">この内容で依頼する</button>
       </form>
@@ -866,9 +1194,15 @@ window.submitPayment = function(event, method = 'クレジットカード') {
 };
 
 function PaymentView() {
+  const currentDriverInfo = driversList.find(d => d.name === state.requestForm.selectedDriver) || driversList[0];
   const method = state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? 'おまかせ（自動割当）' : state.requestForm.selectedDriver;
   const price = state.requestForm.estimatedPrice;
+  const points = state.requestForm.estimatedPoints;
   const trips = state.requestForm.estimatedTrips;
+  const distance = state.requestForm.distanceKm || 2.5;
+  
+  // 移動手段の判定 (車・バイクか、徒歩・自転車か)
+  const isCar = (currentDriverInfo.methodType === 'Car' || currentDriverInfo.methodType === 'Motorcycle' || currentDriverInfo.methodType === 'Unknown');
   
   let costItemBreakdown = '';
   let planLabel = '';
@@ -906,59 +1240,115 @@ function PaymentView() {
   
   if (state.requestForm.frequency === 'once') {
     planLabel = state.requestForm.onceDate ? `単発・都度送迎（8月${state.requestForm.onceDate}日・計1回分）` : '単発・都度送迎（計1回分）';
-    costItemBreakdown = `
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-        <span>実費相当額（ガソリン代等 200円 × 1回）</span>
-        <span style="font-weight:600;">¥200</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-        <span>コミュニティ維持・安全管理料（50円 × 1回）</span>
-        <span>¥50</span>
-      </div>
-    `;
+    if (isCar) {
+      const gasFee = Math.round(distance * 20);
+      costItemBreakdown = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+          <span>ガソリン代実費 (1kmあたり20円 × ${distance}km)</span>
+          <span style="font-weight:600;">¥${gasFee}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+          <span>コミュニティ維持・安全管理料 (1回分)</span>
+          <span>¥50</span>
+        </div>
+      `;
+    } else {
+      costItemBreakdown = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+          <span>必要ポイント (相互扶助)</span>
+          <span style="font-weight:600; color:var(--secondary);">200 pt</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+          <span>コミュニティ維持・安全管理料 (1回分)</span>
+          <span>¥50</span>
+        </div>
+      `;
+    }
   } else if (state.requestForm.frequency === 'weekly') {
     const dayNames = ['月', '火', '水', '木', '金', '土', '日'];
     const selectedDays = state.requestForm.weeklyDays.map(d => dayNames[d - 1]).join('・');
     planLabel = `週単位繰り返し [毎週 ${selectedDays}]（4週分・計${trips}回）`;
-    const jippi = trips * 200;
-    const kanri = trips * 50;
-    costItemBreakdown = `
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-        <span>実費相当額（ガソリン代等 200円 × ${trips}回）</span>
-        <span style="font-weight:600;">¥${jippi.toLocaleString()}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-        <span>コミュニティ維持・安全管理料（50円 × ${trips}回）</span>
-        <span>¥${kanri.toLocaleString()}</span>
-      </div>
-    `;
-  } else if (state.requestForm.frequency === 'monthly') {
-    if (state.requestForm.monthlyType === 'dates') {
-      planLabel = `月単位日付指定（8月分・計${trips}回・まとめ割）`;
-      const jippi = trips * 190;
-      const kanri = trips * 40;
+    
+    if (isCar) {
+      const gasFee = Math.round(distance * 20) * trips;
+      const systemFee = 50 * trips;
       costItemBreakdown = `
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-          <span>実費相当額（まとめ割ガソリン代等 190円 × ${trips}回）</span>
-          <span style="font-weight:600;">¥${jippi.toLocaleString()}</span>
+          <span>ガソリン代実費 (¥${Math.round(distance * 20)} × ${trips}回)</span>
+          <span style="font-weight:600;">¥${gasFee.toLocaleString()}</span>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-          <span>コミュニティ維持・安全管理料（割引40円 × ${trips}回）</span>
-          <span>¥${kanri.toLocaleString()}</span>
+          <span>コミュニティ維持・安全管理料 (¥50 × ${trips}回)</span>
+          <span>¥${systemFee.toLocaleString()}</span>
         </div>
       `;
     } else {
-      planLabel = '安心月定額プラン（平日使い放題・月20回相当）';
+      const systemFee = 50 * trips;
       costItemBreakdown = `
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-          <span>定額実費相当分（ガソリン代等の一括清算分）</span>
-          <span style="font-weight:600;">¥3,200</span>
+          <span>必要ポイント (200pt × ${trips}回)</span>
+          <span style="font-weight:600; color:var(--secondary);">${(200 * trips).toLocaleString()} pt</span>
         </div>
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-          <span>定額コミュニティ維持・安全管理料</span>
-          <span>¥780</span>
+          <span>コミュニティ維持・安全管理料 (¥50 × ${trips}回)</span>
+          <span>¥${systemFee.toLocaleString()}</span>
         </div>
       `;
+    }
+  } else if (state.requestForm.frequency === 'monthly') {
+    if (state.requestForm.monthlyType === 'dates') {
+      planLabel = `月単位日付指定（8月分・計${trips}回・まとめ割）`;
+      if (isCar) {
+        const gasFee = Math.round(distance * 20) * trips;
+        const systemFee = 40 * trips;
+        costItemBreakdown = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+            <span>ガソリン代実費 (¥${Math.round(distance * 20)} × ${trips}回)</span>
+            <span style="font-weight:600;">¥${gasFee.toLocaleString()}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+            <span>コミュニティ維持・安全管理料 (割引¥40 × ${trips}回)</span>
+            <span>¥${systemFee.toLocaleString()}</span>
+          </div>
+        `;
+      } else {
+        const systemFee = 40 * trips;
+        costItemBreakdown = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+            <span>必要ポイント (200pt × ${trips}回)</span>
+            <span style="font-weight:600; color:var(--secondary);">${(200 * trips).toLocaleString()} pt</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+            <span>コミュニティ維持・安全管理料 (割引¥40 × ${trips}回)</span>
+            <span>¥${systemFee.toLocaleString()}</span>
+          </div>
+        `;
+      }
+    } else {
+      planLabel = '安心月定額プラン（平日使い放題・月20回相当）';
+      if (isCar) {
+        costItemBreakdown = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+            <span>定額実費相当分（ガソリン代等の一括清算分）</span>
+            <span style="font-weight:600;">¥3,200</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+            <span>定額コミュニティ維持・安全管理料</span>
+            <span>¥780</span>
+          </div>
+        `;
+      } else {
+        costItemBreakdown = `
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+            <span>定額必要ポイント (一括消費)</span>
+            <span style="font-weight:600; color:var(--secondary);">4,000 pt</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
+            <span>定額コミュニティ維持・安全管理料</span>
+            <span>¥1,000</span>
+          </div>
+        `;
+      }
     }
   }
   
@@ -967,8 +1357,14 @@ function PaymentView() {
     <main class="fade-in" style="padding-bottom: 20px;">
       <div class="card" style="margin-bottom: 24px; border: 2px solid var(--primary);">
         <h3 style="color:var(--primary); margin-top:0; text-align:center;">送迎料金のご確認</h3>
-        <div style="font-size:2rem; font-weight:700; text-align:center; margin: 16px 0;">
-          ¥${price.toLocaleString()} <span style="font-size:0.9rem; font-weight:400; color:var(--text-muted);">${state.requestForm.frequency === 'once' ? '/ 1回' : '/ 期間合計'}</span>
+        <div style="font-size:2rem; font-weight:700; text-align:center; margin: 16px 0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">
+          <div>¥${price.toLocaleString()}</div>
+          ${points > 0 ? `
+            <div style="font-size:1.1rem; color:var(--secondary); font-weight:700;">+ ${points.toLocaleString()} pt</div>
+          ` : ''}
+          <div style="font-size:0.8rem; font-weight:400; color:var(--text-muted); margin-top:4px;">
+            ${state.requestForm.frequency === 'once' ? '/ 1回分' : '/ 期間合計'}
+          </div>
         </div>
         
         <div style="background:#f8fafc; padding:16px; border-radius:8px; margin-bottom:16px; border: 1px solid var(--border);">
@@ -1046,8 +1442,15 @@ function PaymentView() {
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="margin-top:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
-          <i class="ph ph-credit-card"></i> ¥${price.toLocaleString()} を支払って依頼を確定する
+        <button type="submit" class="btn btn-primary" style="margin-top:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding: 12px 16px;">
+          <span style="display:flex; align-items:center; gap:8px; font-weight:700;">
+            <i class="ph ph-credit-card"></i> ¥${price.toLocaleString()} を支払って依頼を確定する
+          </span>
+          ${points > 0 ? `
+            <span style="font-size:0.75rem; font-weight:600; color:rgba(255,255,255,0.9);">
+              (および ${points.toLocaleString()} pt の消費)
+            </span>
+          ` : ''}
         </button>
         <button type="button" class="btn btn-outline" style="margin-top:8px;" onclick="navigate('request')">依頼内容を修正する</button>
       </form>
@@ -1056,40 +1459,144 @@ function PaymentView() {
   `;
 }
 
+// 保護者画面の Leaflet マップ初期化関数
+function initActiveRideMap() {
+  setTimeout(() => {
+    const mapEl = document.getElementById('map');
+    if (!mapEl) return;
+    
+    const startCoord = coordinatesMap[state.requestForm.kindergarten] || coordinatesMap["三鷹市立大沢保育園"];
+    const destCoord = coordinatesMap[state.requestForm.location] || coordinatesMap["自宅（デフォルト）"];
+    
+    if (window.leafletMap) {
+      window.leafletMap.remove();
+      window.leafletMap = null;
+    }
+    
+    // マップインスタンスの生成
+    const map = L.map('map').setView([startCoord.lat, startCoord.lng], 14);
+    window.leafletMap = map;
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    
+    // 出発地 (保育園) ピン
+    L.marker([startCoord.lat, startCoord.lng], {
+      icon: L.divIcon({
+        className: 'map-pin-start',
+        html: `<div style="background:var(--primary); color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:var(--shadow-md);"><i class="ph ph-map-pin" style="font-size:1.2rem;"></i></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      })
+    }).addTo(map).bindPopup('出発地: ' + (state.requestForm.kindergarten || '保育園'));
+    
+    // 目的地 (自宅) ピン
+    L.marker([destCoord.lat, destCoord.lng], {
+      icon: L.divIcon({
+        className: 'map-pin-end',
+        html: `<div style="background:#0284c7; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow:var(--shadow-md);"><i class="ph ph-house" style="font-size:1.2rem;"></i></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      })
+    }).addTo(map).bindPopup('目的地: ' + (state.requestForm.location || 'ご自宅'));
+    
+    // 送迎ルートと送迎者マーカー
+    if (state.activeRide.status === 'riding' || state.activeRide.status === 'completed') {
+      if (state.activeRide.routePoints && state.activeRide.routePoints.length > 0) {
+        const latlngs = state.activeRide.routePoints.map(p => [p.lat, p.lng]);
+        L.polyline(latlngs, { color: 'var(--primary)', weight: 4, opacity: 0.7, dashArray: '8, 8' }).addTo(map);
+      }
+      
+      const curLoc = state.activeRide.currentLocation || startCoord;
+      const selectedDriverName = state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? '佐藤 カズヤ' : state.requestForm.selectedDriver;
+      const driverInfo = driversList.find(d => d.name === selectedDriverName) || driversList[1];
+      const isCar = (driverInfo.methodType === 'Car' || driverInfo.methodType === 'Motorcycle' || driverInfo.methodType === 'Unknown');
+      
+      const driverIcon = L.divIcon({
+        className: 'map-pin-driver',
+        html: `<div style="background:var(--secondary); color:white; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:3px solid white; box-shadow:var(--shadow-lg); animation: pulse 2s infinite;"><i class="ph-fill ${isCar ? 'ph-steering-wheel' : 'ph-bicycle'}" style="font-size:1.4rem;"></i></div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+      });
+      
+      window.driverMarker = L.marker([curLoc.lat, curLoc.lng], { icon: driverIcon }).addTo(map);
+      window.driverMarker.bindPopup('送迎パートナー現在地').openPopup();
+      
+      map.fitBounds([[startCoord.lat, startCoord.lng], [destCoord.lat, destCoord.lng]], { padding: [50, 50] });
+    } else {
+      map.setView([startCoord.lat, startCoord.lng], 14);
+    }
+  }, 100);
+}
+
 function ActiveRideView() {
+  const ride = state.activeRide;
+  let statusBadge = '';
+  let statusText = '';
+  
+  if (ride.status === 'idle') {
+    statusBadge = '<span style="background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:700;">待機中</span>';
+    statusText = '送迎パートナーからの「送迎開始」を待っています。';
+  } else if (ride.status === 'riding') {
+    statusBadge = '<span style="background:#def7ec; color:var(--secondary); padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:700; animation: pulse 2s infinite;">送迎中</span>';
+    statusText = `目的地（ご自宅）へ移動中です。`;
+  } else if (ride.status === 'completed') {
+    statusBadge = '<span style="background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:700;">送迎完了</span>';
+    statusText = '無事に目的地に到着しました。送迎完了です。';
+  }
+
+  const selectedDriverName = state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? '佐藤 カズヤ' : state.requestForm.selectedDriver;
+  const driverInfo = driversList.find(d => d.name === selectedDriverName) || driversList[1];
+  const distanceLeft = state.requestForm.distanceKm || 2.5;
+
   return `
     ${renderHeader('送迎ステータス')}
     <main class="fade-in" style="padding-bottom: 20px;">
-      <!-- Map Mock with Freemium Upsell -->
-      <div class="map-mock" style="position:relative;">
-        <div class="tracking-marker" style="filter: blur(2px);"></div>
-        <div class="map-overlay">
-          <div style="font-weight:700; font-size:1.1rem;">送迎中</div>
-          <div style="font-size:0.9rem; opacity:0.9;">目的地まで約5分</div>
-        </div>
+      <!-- Realtime Leaflet Map -->
+      <div style="position:relative; margin-bottom:16px;">
+        <div id="map" style="width: 100%; height: 320px; border-radius: 12px; box-shadow: var(--shadow-sm); border:1px solid var(--border); z-index:1;"></div>
         
-        <!-- Freemium Overlay -->
-        <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.75); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px;">
-          <i class="ph-fill ph-lock-key" style="font-size:2rem; color:var(--text-muted); margin-bottom:8px;"></i>
-          <p style="font-size:0.85rem; font-weight:700; text-align:center; color:var(--text-main); margin-top:0; margin-bottom:4px;">無料版では出発・到着の通知のみご利用いただけます</p>
-          <p style="font-size:0.7rem; text-align:center; color:var(--text-muted); margin-bottom:12px; line-height:1.4;">※「リアルタイムGPS追跡」と「ドラレコ映像のリアルタイム表示」を利用するには、有料見守りプランが必要です。</p>
-          <button class="btn" style="background:var(--primary); color:white; width:auto; padding:8px 16px; font-size:0.8rem; box-shadow:0 4px 12px rgba(230,126,34,0.3);" onclick="alert('有料プランの登録画面へ推移します（プロトタイプ）')">
-            月額500円「安心見守りパック」を試す
-          </button>
+        <div class="map-overlay" style="z-index: 2; position: absolute; bottom: 12px; left: 12px; right: 12px; background: rgba(255,255,255,0.95); padding: 12px; border-radius: 8px; box-shadow: var(--shadow-md); display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong>ステータス:</strong> ${statusBadge}
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;" id="tracking-info-text">
+              ${statusText}
+            </div>
+          </div>
+          ${ride.status === 'riding' ? `
+            <div style="text-align:right;">
+              <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600; display:block;">残り距離</span>
+              <strong style="color:var(--primary); font-size:1.1rem;" id="tracking-distance-left">${distanceLeft} km</strong>
+            </div>
+          ` : ''}
         </div>
       </div>
 
       <!-- Driver Info -->
-      <div class="card" style="display:flex; align-items:center; gap:16px;">
+      <div class="card" style="display:flex; align-items:center; gap:16px; margin-bottom:16px;">
         <img src="${driver.avatar}" alt="Driver" class="avatar" style="width:50px; height:50px;">
         <div style="flex:1;">
-          <h3 style="margin:0;">${driver.name}</h3>
+          <h3 style="margin:0;">${driverInfo.name}</h3>
           <div class="rating" style="font-size:0.9rem;">
             <i class="ph-fill ph-star"></i> ${driver.rating}
           </div>
-          <div style="font-size:0.8rem; color:var(--text-muted);">${driver.vehicle}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted);">移動手段: ${driverInfo.method}</div>
         </div>
-        <button class="btn btn-outline" style="width:auto; padding:8px; border-radius:50%;"><i class="ph ph-phone"></i></button>
+        <button class="btn btn-outline" style="width:auto; padding:8px; border-radius:50%;" onclick="alert('送迎パートナーへ発信します（デモ用）')"><i class="ph ph-phone"></i></button>
+      </div>
+
+      <!-- Premium Upsell Banner -->
+      <div class="card" style="background:#eff6ff; border:1px solid #bfdbfe; display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:16px; box-shadow:none; cursor:default;">
+        <i class="ph ph-video-camera" style="font-size:1.8rem; color:#1d4ed8;"></i>
+        <div style="flex:1;">
+          <h4 style="margin:0; font-size:0.85rem; color:#1e3a8a;">【有料】ドライブレコーダー映像配信</h4>
+          <p style="font-size:0.75rem; color:#1e40af; margin:4px 0 0 0; line-height:1.4;">プレミアム機能：走行中の車載カメラ映像をリアルタイムで視聴できます（月額500円）。</p>
+        </div>
+        <button class="btn btn-primary" style="width:auto; padding:6px 12px; font-size:0.8rem; background:#1d4ed8;" onclick="alert('プレミアム機能への登録が必要です（デモ用）')">視聴</button>
       </div>
 
       <!-- Chat UI -->
@@ -1104,7 +1611,7 @@ function ActiveRideView() {
         </div>
         <div class="chat-input-area">
           <input type="text" placeholder="メッセージを入力...">
-          <button><i class="ph ph-paper-plane-right"></i></button>
+          <button onclick="alert('メッセージ送信（デモ用）')"><i class="ph ph-paper-plane-right"></i></button>
         </div>
       </div>
       
@@ -1225,6 +1732,129 @@ function DriverVerificationView() {
 }
 
 function DriverDashboardView() {
+  const ride = state.activeRide;
+  const isBooked = state.requestForm.isBooked;
+  
+  const selectedDriverName = state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? '佐藤 カズヤ' : state.requestForm.selectedDriver;
+  const isMe = (selectedDriverName === '佐藤 カズヤ'); // デモ用：自分が担当か判定
+  
+  let activeRideCardHtml = '';
+  let estimationSummaryHtml = `
+    <div style="font-size:2rem; font-weight:700; color:var(--text-main);">12<span style="font-size:1rem;"> 回</span></div>
+    <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">送迎完了</div>
+  `;
+  let earningsSummaryHtml = `
+    <div style="font-size:2.2rem; font-weight:700; color:var(--primary);"><span style="font-size:1.2rem; font-weight:600;">¥</span>2,400</div>
+    <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">実費精算見込額</div>
+  `;
+
+  if (isBooked && isMe) {
+    const isCar = (state.activeRide.transportMethod === 'Car' || state.requestForm.transportMethod === 'Motorcycle' || state.requestForm.transportMethod === 'Unknown');
+    
+    // 実費表示の更新
+    if (ride.status === 'completed') {
+      const addedGas = isCar ? Math.round((state.requestForm.distanceKm || 2.5) * 20) : 0;
+      const totalGas = 2400 + addedGas;
+      earningsSummaryHtml = `
+        <div style="font-size:2.2rem; font-weight:700; color:var(--primary);"><span style="font-size:1.2rem; font-weight:600;">¥</span>${totalGas.toLocaleString()}</div>
+        <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">実費精算見込額 <span style="color:var(--secondary);">（+¥${addedGas} 反映済）</span></div>
+      `;
+      estimationSummaryHtml = `
+        <div style="font-size:2rem; font-weight:700; color:var(--text-main);">13<span style="font-size:1rem;"> 回</span></div>
+        <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">送迎完了 <span style="color:var(--secondary);">（本日分 +1）</span></div>
+      `;
+    }
+
+    let controlPanelHtml = '';
+    if (ride.status === 'idle') {
+      controlPanelHtml = `
+        <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; margin-top:8px;">
+          ※「送迎開始」を押すと、保護者のアプリ画面にリアルタイムの位置追跡マップが公開され、GPS信号の送信が始まります。
+        </p>
+        <button class="btn btn-primary" onclick="window.startGpsSimulation()" style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <i class="ph-fill ph-play-circle" style="font-size:1.2rem;"></i> 送迎を開始する（GPS配信開始）
+        </button>
+      `;
+    } else if (ride.status === 'riding') {
+      const progressPercent = ride.routePoints && ride.routePoints.length > 0 ? (ride.currentIndex / (ride.routePoints.length - 1)) * 100 : 0;
+      const intervalSec = isCar ? 10 : 15;
+      const remainingSteps = ride.routePoints ? ride.routePoints.length - 1 - ride.currentIndex : 0;
+      const minutesLeft = Math.round(remainingSteps * (intervalSec / 6)) / 10;
+      
+      controlPanelHtml = `
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-top:8px; margin-bottom:12px; text-align:left;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:0.8rem; font-weight:700; color:#15803d; display:flex; align-items:center; gap:4px;">
+              <span style="width:8px; height:8px; background:#22c55e; border-radius:50%; display:inline-block; animation:pulse 1s infinite;"></span>
+              現在GPS信号を配信中
+            </span>
+            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">
+              電波強度: <span style="color:#22c55e;">●●● 良好</span>
+            </span>
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:6px;">
+            送信間隔: <strong id="driver-interval-desc">${intervalSec}秒おき</strong> (${isCar ? '車ルート' : '徒歩・自転車ルート'})
+          </div>
+          
+          <!-- 進捗プログレスバー -->
+          <div style="width:100%; background:#e2e8f0; height:6px; border-radius:3px; overflow:hidden; margin-bottom:6px;">
+            <div id="driver-progress-bar-fill" style="width:${progressPercent}%; background:var(--secondary); height:100%; transition: width 0.5s ease;"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-muted);">
+            <span>出発地</span>
+            <span id="driver-time-left">残り約 ${minutesLeft} 分</span>
+            <span>目的地</span>
+          </div>
+        </div>
+        
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" style="flex:1; border-color:var(--danger); color:var(--danger);" onclick="window.stopGpsSimulation(true)">
+            一時停止
+          </button>
+          <button class="btn btn-secondary" style="flex:2;" onclick="window.simulateGpsStep()">
+            手動で進める (デモ用)
+          </button>
+        </div>
+      `;
+    } else if (ride.status === 'completed') {
+      controlPanelHtml = `
+        <div style="background:#e0f2fe; border:1px solid #bae6fd; border-radius:8px; padding:12px; margin-top:8px; text-align:center; color:#0369a1;">
+          <i class="ph-fill ph-check-circle" style="font-size:1.8rem; margin-bottom:4px; display:block;"></i>
+          <span style="font-size:0.85rem; font-weight:700;">本日の送迎は正常に完了しました</span>
+          <p style="font-size:0.75rem; margin:4px 0 0 0; color:#075985;">ご協力ありがとうございました。実費精算残高が更新されました。</p>
+        </div>
+        <button class="btn btn-outline" onclick="window.resetGpsSimulation()" style="margin-top:12px;">
+          ステータスをリセットする
+        </button>
+      `;
+    }
+
+    activeRideCardHtml = `
+      <div class="card" style="margin-bottom:24px; border-left:4px solid var(--primary); box-shadow: var(--shadow-md);">
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+          <span style="font-weight:700; color:var(--text-main);">本日 ${state.requestForm.specificTime} 予定</span>
+          <span style="font-size:0.85rem; color:var(--text-muted); font-weight:700;">
+            <i class="ph ${isCar ? 'ph-car' : 'ph-bicycle'}"></i> ${isCar ? '車送迎（ガソリン実費精算）' : '自転車・徒歩（ポイント互助）'}
+          </span>
+        </div>
+        <div style="font-size:0.9rem; margin-bottom:6px; font-weight:600;"><i class="ph ph-map-pin" style="color:var(--primary)"></i> 発：${state.requestForm.kindergarten}</div>
+        <div style="font-size:0.9rem; margin-bottom:12px;"><i class="ph ph-house" style="color:var(--text-muted)"></i> 着：${state.requestForm.location || 'ご自宅'}</div>
+        
+        <!-- GPS送信操作パネル -->
+        <div style="border-top:1px dashed #e2e8f0; padding-top:12px; margin-top:8px;">
+          ${controlPanelHtml}
+        </div>
+      </div>
+    `;
+  } else {
+    activeRideCardHtml = `
+      <div class="card" style="margin-bottom:24px; text-align:center; color:var(--text-muted); padding: 32px 16px;">
+        <i class="ph ph-calendar-x" style="font-size:2rem; margin-bottom:8px; color:#94a3b8;"></i>
+        <p style="font-size:0.85rem; margin:0;">現在アサインされている未完了の送迎依頼はありません。</p>
+      </div>
+    `;
+  }
+
   return `
     ${renderHeader('【送迎者用】稼働・精算ダッシュボード')}
     <main class="fade-in" style="padding-bottom:80px; padding-top:20px;">
@@ -1232,12 +1862,12 @@ function DriverDashboardView() {
         <div style="display:flex; align-items:center; gap:12px;">
           <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user" alt="Me" class="avatar" style="width:48px; height:48px; display:block;">
           <div>
-            <div style="font-weight:700; font-size:1.1rem;">田中 マリ</div>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;"><i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 審査通過済 (自転車)</div>
+            <div style="font-weight:700; font-size:1.1rem;">佐藤 カズヤ</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;"><i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 審査通過済 (三鷹地区)</div>
           </div>
         </div>
         <div>
-          <span style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:16px; font-size:0.8rem; font-weight:700;">受付中</span>
+          <span style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:16px; font-size:0.8rem; font-weight:700;">受託可能</span>
         </div>
       </div>
 
@@ -1245,13 +1875,11 @@ function DriverDashboardView() {
         <p style="margin-top:0; font-size:0.95rem; font-weight:700; color:var(--primary);">今月の稼働サマリー（実費精算実績）</p>
         <div style="display:flex; justify-content:space-around; margin-top:16px; align-items:center;">
           <div>
-            <div style="font-size:2rem; font-weight:700; color:var(--text-main);">12<span style="font-size:1rem;"> 回</span></div>
-            <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">送迎完了</div>
+            ${estimationSummaryHtml}
           </div>
           <div style="width:1px; background:#e2e8f0; height:40px;"></div>
           <div>
-            <div style="font-size:2.2rem; font-weight:700; color:var(--primary);"><span style="font-size:1.2rem; font-weight:600;">¥</span>2,400</div>
-            <div style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">実費精算見込額</div>
+            ${earningsSummaryHtml}
           </div>
         </div>
         <div style="font-size:0.7rem; color:var(--text-muted); margin-top:16px; line-height:1.5; text-align:left; background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0;">
@@ -1260,15 +1888,7 @@ function DriverDashboardView() {
       </div>
 
       <h3 style="font-size:1.1rem; margin-bottom:12px; padding-left:8px; display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-car-profile" style="color:var(--primary)"></i> 未完了の送迎依頼</h3>
-      <div class="card" style="margin-bottom:24px; border-left:4px solid var(--primary);">
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
-          <span style="font-weight:700; color:var(--text-main);">本日 16:30 予定</span>
-          <span style="font-size:0.85rem; color:var(--text-muted);"><i class="ph-fill ph-bicycle"></i> 自転車利用</span>
-        </div>
-        <div style="font-size:0.95rem; margin-bottom:6px; font-weight:600;"><i class="ph ph-map-pin" style="color:var(--primary)"></i> 迎：三鷹市立大沢保育園</div>
-        <div style="font-size:0.95rem; margin-bottom:16px;"><i class="ph ph-house" style="color:var(--text-muted)"></i> 送：三鷹台マンション前</div>
-        <button class="btn btn-primary" onclick="navigate('active')">送迎ステータスを開始する（モック）</button>
-      </div>
+      ${activeRideCardHtml}
 
       <!-- 送迎者 稼働スケジュール設定用カレンダー -->
       <div class="card" style="margin-bottom:24px;">
@@ -1416,6 +2036,7 @@ function render() {
       break;
     case 'active':
       appContainer.innerHTML = ActiveRideView();
+      initActiveRideMap();
       break;
     default:
       appContainer.innerHTML = AuthLoginView();
