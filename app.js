@@ -235,6 +235,56 @@ function navigate(route) {
 // Ensure navigate is globally available for inline event handlers if needed
 window.navigate = navigate;
 
+// 洗練されたカスタムモーダル表示関数 (Rich Aesthetics & フリーズ回避)
+window.showCustomAlert = function(title, message, callback) {
+  // すでにモーダルがあれば削除
+  const existingModal = document.getElementById('custom-alert-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
+  const modalHtml = `
+    <div id="custom-alert-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; transition: opacity 0.25s ease;">
+      <div style="background: white; width: 90%; max-width: 380px; padding: 24px; border-radius: 16px; box-shadow: var(--shadow-xl); text-align: center; transform: scale(0.9); transition: transform 0.25s ease;">
+        <div style="font-size: 3rem; color: var(--primary); margin-bottom: 12px;">
+          <i class="ph-fill ph-info" style="color: var(--primary);"></i>
+        </div>
+        <h3 style="margin-top: 0; margin-bottom: 8px; color: var(--text-main); font-size: 1.15rem; font-weight: 700;">${title}</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">${message}</p>
+        <button id="custom-alert-ok-btn" class="btn btn-primary" style="width: 100%; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem;">確認</button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  const modal = document.getElementById('custom-alert-modal');
+  const content = modal.querySelector('div');
+  
+  // アニメーション表示
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    content.style.transform = 'scale(1)';
+  }, 10);
+
+  const closeFn = () => {
+    modal.style.opacity = '0';
+    content.style.transform = 'scale(0.9)';
+    setTimeout(() => {
+      modal.remove();
+      if (callback) callback();
+    }, 250);
+  };
+
+  document.getElementById('custom-alert-ok-btn').addEventListener('click', closeFn);
+  // 背景クリックでも閉じる
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeFn();
+    }
+  });
+};
+
 // Components
 function renderHeader(title) {
   return `
@@ -285,8 +335,7 @@ window.submitRegistration = function(event) {
   db.push(user);
   localStorage.setItem(DB_KEY, JSON.stringify(db));
   
-  alert('データベースに登録が完了しました！');
-  navigate('profile');
+  showCustomAlert('登録完了', 'データベースに登録が完了しました！', () => navigate('profile'));
 };
 
 window.exportCSV = function() {
@@ -877,15 +926,15 @@ window.submitRequest = function(event) {
 
   // バリデーション
   if (state.requestForm.frequency === 'once' && !state.requestForm.onceDate) {
-    alert('送迎を希望する日付を選択してください。');
+    showCustomAlert('入力エラー', '送迎を希望する日付を選択してください。');
     return;
   }
   if (state.requestForm.frequency === 'weekly' && state.requestForm.weeklyDays.length === 0) {
-    alert('送迎を希望する曜日を1つ以上選択してください。');
+    showCustomAlert('入力エラー', '送迎を希望する曜日を1つ以上選択してください。');
     return;
   }
   if (state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' && state.requestForm.monthlyDays.length === 0) {
-    alert('送迎を希望する日付を1つ以上選択してください。');
+    showCustomAlert('入力エラー', '送迎を希望する日付を1つ以上選択してください。');
     return;
   }
 
@@ -900,22 +949,18 @@ window.submitRequest = function(event) {
   }
   state.requestForm.location = location.value;
   
-  let matchedDriverInfo;
-  let driverStr;
-  
+  // 自動マッチング時のドライバー決定ロジック
   if (state.requestForm.selectedDriver === 'おまかせ（自動マッチング）') {
     const match = driversList.find(d => d.kindergarten === state.requestForm.kindergarten);
     if (match) {
-      matchedDriverInfo = match;
-      driverStr = `${match.name}（自動割当）`;
+      state.requestForm.selectedDriver = match.name;
     } else {
-      matchedDriverInfo = driversList[1]; // fallback
-      driverStr = `${matchedDriverInfo.name}（自動割当）`;
+      state.requestForm.selectedDriver = driversList[1].name; // 佐藤カズヤをフォールバックに
     }
-  } else {
-    matchedDriverInfo = driversList.find(d => d.name === state.requestForm.selectedDriver) || driversList[0];
-    driverStr = matchedDriverInfo.name;
   }
+  
+  // 強制的に最終再計算を走らせる
+  window.calculateEstimation();
   
   navigate('payment');
 };
@@ -1188,9 +1233,10 @@ function RequestFormView() {
 window.submitPayment = function(event, method = 'クレジットカード') {
   if(event) event.preventDefault();
   const price = state.requestForm.estimatedPrice;
-  alert(`【${method}】にて${price.toLocaleString()}円の決済が完了しました！送迎者とのマッチングを開始します。`);
-  state.requestForm.isBooked = true; // 予約完了フラグ
-  navigate('active');
+  showCustomAlert('決済完了', `【${method}】にて${price.toLocaleString()}円の決済が完了しました！送迎者とのマッチングを開始します。`, () => {
+    state.requestForm.isBooked = true; // 予約完了フラグ
+    navigate('active');
+  });
 };
 
 function PaymentView() {
@@ -1586,7 +1632,7 @@ function ActiveRideView() {
           </div>
           <div style="font-size:0.8rem; color:var(--text-muted);">移動手段: ${driverInfo.method}</div>
         </div>
-        <button class="btn btn-outline" style="width:auto; padding:8px; border-radius:50%;" onclick="alert('送迎パートナーへ発信します（デモ用）')"><i class="ph ph-phone"></i></button>
+        <button class="btn btn-outline" style="width:auto; padding:8px; border-radius:50%;" onclick="showCustomAlert('通話機能', '送迎パートナーへ発信します（デモ用）')"><i class="ph ph-phone"></i></button>
       </div>
 
       <!-- Premium Upsell Banner -->
@@ -1596,7 +1642,7 @@ function ActiveRideView() {
           <h4 style="margin:0; font-size:0.85rem; color:#1e3a8a;">【有料】ドライブレコーダー映像配信</h4>
           <p style="font-size:0.75rem; color:#1e40af; margin:4px 0 0 0; line-height:1.4;">プレミアム機能：走行中の車載カメラ映像をリアルタイムで視聴できます（月額500円）。</p>
         </div>
-        <button class="btn btn-primary" style="width:auto; padding:6px 12px; font-size:0.8rem; background:#1d4ed8;" onclick="alert('プレミアム機能への登録が必要です（デモ用）')">視聴</button>
+        <button class="btn btn-primary" style="width:auto; padding:6px 12px; font-size:0.8rem; background:#1d4ed8;" onclick="showCustomAlert('安心見守りパック', 'プレミアム機能（走行中の車載カメラ映像配信）への登録が必要です（デモ用）')">視聴</button>
       </div>
 
       <!-- Chat UI -->
@@ -1611,7 +1657,7 @@ function ActiveRideView() {
         </div>
         <div class="chat-input-area">
           <input type="text" placeholder="メッセージを入力...">
-          <button onclick="alert('メッセージ送信（デモ用）')"><i class="ph ph-paper-plane-right"></i></button>
+          <button onclick="showCustomAlert('メッセージ送信', 'メッセージを送信しました（デモ用）')"><i class="ph ph-paper-plane-right"></i></button>
         </div>
       </div>
       
@@ -1722,7 +1768,7 @@ function DriverVerificationView() {
         </div>
       </div>
 
-      <button class="btn btn-primary" onclick="alert('書類が提出されました。運営の審査が完了するまでしばらくお待ち下さい。'); navigate('driver-dashboard')">審査を申し込む処理へ（モック）</button>
+      <button class="btn btn-primary" onclick="showCustomAlert('申請完了', '書類が提出されました。運営の審査が完了するまでしばらくお待ち下さい。', () => navigate('driver-dashboard'))">審査を申し込む処理へ（モック）</button>
       <div style="text-align:center; margin-top:16px;">
         <a href="#" onclick="navigate('profile')" style="color:var(--text-muted); font-size:0.9rem;">戻る</a>
       </div>
