@@ -243,6 +243,8 @@ window.showCustomAlert = function(title, message, callback) {
     existingModal.remove();
   }
 
+  let hasCallbackRun = false; // コールバックの重複実行を防止するフラグ
+
   const modalHtml = `
     <div id="custom-alert-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; transition: opacity 0.25s ease;">
       <div style="background: white; width: 90%; max-width: 380px; padding: 24px; border-radius: 16px; box-shadow: var(--shadow-xl); text-align: center; transform: scale(0.9); transition: transform 0.25s ease;">
@@ -272,11 +274,18 @@ window.showCustomAlert = function(title, message, callback) {
     content.style.transform = 'scale(0.9)';
     setTimeout(() => {
       modal.remove();
-      if (callback) callback();
+      if (callback && !hasCallbackRun) {
+        hasCallbackRun = true;
+        callback();
+      }
     }, 250);
   };
 
-  document.getElementById('custom-alert-ok-btn').addEventListener('click', closeFn);
+  document.getElementById('custom-alert-ok-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeFn();
+  });
+  
   // 背景クリックでも閉じる
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
