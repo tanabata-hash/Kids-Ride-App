@@ -408,6 +408,24 @@ function AuthLoginView() {
         <p style="font-size:0.9rem;">メールアドレスとパスワードを入力してください。</p>
       </div>
 
+      <!-- サービス概要案内（銀行口座審査・関係者向け） -->
+      <div class="card" style="margin-bottom: 24px; border-left: 4px solid var(--primary); background-color: #f7fafc; padding: 16px; text-align: left;">
+        <h3 style="margin-top: 0; font-size: 0.95rem; color: var(--primary); font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 1.2rem;">💡</span> KidsRide サービス概要と目的
+        </h3>
+        <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-main); margin-bottom: 10px;">
+          KidsRideは、保護者・地域ボランティアドライバー・幼稚園や施設をつなぐ<strong>「子ども送迎・見守り互助プラットフォーム」</strong>です。共働き保護者のキャリア継続と子どもの安全な移動手段の確保を目的として開発されました。
+        </p>
+        <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+          <strong>デモプロトタイプで確認可能な主な機能:</strong>
+          <ul style="margin: 4px 0 0 16px; padding: 0;">
+            <li><strong>送迎リクエスト</strong>: 送迎日時、対象施設、希望ドライバー（車または徒歩・自転車）の選択と料金シミュレーション</li>
+            <li><strong>リアルタイム追跡 (GPS)</strong>: 送迎中のドライバー位置情報の Leaflet 地図上でのシミュレーション追跡</li>
+            <li><strong>管理者・施設用ダッシュボード</strong>: 送迎スケジュールのカレンダー管理、ドライバー承認およびアサイン管理</li>
+          </ul>
+        </div>
+      </div>
+
       <form onsubmit="submitLogin(event)" class="card">
         <div class="form-group">
           <label>メールアドレス</label>
