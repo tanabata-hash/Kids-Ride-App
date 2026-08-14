@@ -20,7 +20,7 @@ if (useRealFirebase) {
 // 状態管理 (State management)
 const state = {
   currentRoute: 'login',
-  isAuthenticated: localStorage.getItem('kidsride_demo_auth') === 'true',
+  isAuthenticated: true,
   requestForm: {
     kindergarten: '',
     location: '',
@@ -2052,11 +2052,7 @@ window.submitPassword = function(event) {
 function render() {
   const appContainer = document.getElementById('app');
   
-  // パスコード認証チェック
-  if (!state.isAuthenticated) {
-    appContainer.innerHTML = PasswordView();
-    return;
-  }
+
 
   switch(state.currentRoute) {
     case 'facility-admin':
