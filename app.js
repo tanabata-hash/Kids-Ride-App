@@ -417,9 +417,9 @@ function AuthLoginView() {
           KidsRideは、保護者・地域ボランティアドライバー・幼稚園や施設をつなぐ<strong>「子ども送迎・見守り互助プラットフォーム」</strong>です。共働き保護者のキャリア継続と子どもの安全な移動手段の確保を目的として開発されました。
         </p>
         <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-          <strong>デモプロトタイプで確認可能な主な機能:</strong>
+          <strong>デモプロトタイプで確認可能な機能および料金モデル:</strong>
           <ul style="margin: 4px 0 0 16px; padding: 0;">
-            <li><strong>送迎リクエスト</strong>: 送迎日時、対象施設、希望ドライバー（車または徒歩・自転車）の選択と料金シミュレーション</li>
+            <li><strong>法令遵守の料金構成</strong>: 送迎パートナーへの直接謝礼（200円/収納代行）と、KidsRideシステム利用料（100円/GPS追跡・保険・安全サポート対価）を明確に分脱請求</li>
             <li><strong>リアルタイム追跡 (GPS)</strong>: 送迎中のドライバー位置情報の Leaflet 地図上でのシミュレーション追跡</li>
             <li><strong>管理者・施設用ダッシュボード</strong>: 送迎スケジュールのカレンダー管理、ドライバー承認およびアサイン管理</li>
           </ul>
@@ -871,20 +871,18 @@ window.calculateEstimation = function() {
     }
   }
   
-  // 4. 現金請求額とポイント消費額の計算
+  // 4. お支払い請求額（パートナー直接謝礼＋KidsRideシステム利用料別建て）の計算
   if (isCar) {
     // 【車・バイクの場合】
     if (form.frequency === 'monthly' && form.monthlyType === 'flat') {
-      // 安心月定額プラン
-      form.estimatedPrice = 3980;
+      // 平日使い放題定額プラン（3,500円/月）
+      form.estimatedPrice = 3500;
       form.estimatedPoints = 0;
-      form.oneTripPrice = Math.round(3980 / 20);
+      form.oneTripPrice = 175;
     } else {
-      // 通常プラン：ガソリン実費（1kmあたり20円） ＋ コミュニティ維持料
-      // 月単位日付指定(まとめ割)の場合は、維持料を40円に割引
-      const isDiscount = (form.frequency === 'monthly' && form.monthlyType === 'dates');
+      // 通常プラン：ガソリン実費（1kmあたり20円/収納代行） ＋ KidsRideシステム利用料（100円）
       const gasFee = Math.round(form.distanceKm * 20);
-      const systemFee = isDiscount ? 40 : 50;
+      const systemFee = 100;
       form.oneTripPrice = gasFee + systemFee;
       form.estimatedPrice = form.oneTripPrice * form.estimatedTrips;
       form.estimatedPoints = 0;
@@ -892,17 +890,15 @@ window.calculateEstimation = function() {
   } else {
     // 【徒歩・自転車の場合】
     if (form.frequency === 'monthly' && form.monthlyType === 'flat') {
-      // 安心月定額プラン：現金1000円＋4000pt
-      form.estimatedPrice = 1000;
-      form.estimatedPoints = 4000;
-      form.oneTripPrice = Math.round(1000 / 20);
+      // 平日使い放題定額プラン：3,500円（パートナー一括2,500円＋システム利用料1,000円）
+      form.estimatedPrice = 3500;
+      form.estimatedPoints = 0;
+      form.oneTripPrice = 175;
     } else {
-      // 通常プラン：現金はシステム維持料のみ（割引時40円、通常50円）、ポイントは1回200pt
-      const isDiscount = (form.frequency === 'monthly' && form.monthlyType === 'dates');
-      const systemFee = isDiscount ? 40 : 50;
-      form.oneTripPrice = systemFee;
-      form.estimatedPrice = systemFee * form.estimatedTrips;
-      form.estimatedPoints = 200 * form.estimatedTrips;
+      // 通常プラン：1回合計300円（パートナー直接謝礼200円/収納代行 ＋ KidsRideシステム利用料100円）
+      form.oneTripPrice = 300;
+      form.estimatedPrice = 300 * form.estimatedTrips;
+      form.estimatedPoints = 0;
     }
   }
 };
@@ -1317,23 +1313,23 @@ function PaymentView() {
       const gasFee = Math.round(distance * 20);
       costItemBreakdown = `
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-          <span>ガソリン代実費 (1kmあたり20円 × ${distance}km)</span>
+          <span>送迎パートナー受領実費 (ガソリン代/収納代行)</span>
           <span style="font-weight:600;">¥${gasFee}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-          <span>コミュニティ維持・安全管理料 (1回分)</span>
-          <span>¥50</span>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--primary);">
+          <span>KidsRide システム利用料 (GPS追跡・保険・安全サポート対価)</span>
+          <span style="font-weight:600;">¥100</span>
         </div>
       `;
     } else {
       costItemBreakdown = `
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-          <span>必要ポイント (相互扶助)</span>
-          <span style="font-weight:600; color:var(--secondary);">200 pt</span>
+          <span>送迎パートナー直接謝礼目安 (個人間精算/収納代行)</span>
+          <span style="font-weight:600; color:var(--secondary);">¥200</span>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-          <span>コミュニティ維持・安全管理料 (1回分)</span>
-          <span>¥50</span>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--primary);">
+          <span>KidsRide システム利用料 (GPS追跡・保険・安全サポート対価)</span>
+          <span style="font-weight:600;">¥100</span>
         </div>
       `;
     }
@@ -1344,84 +1340,58 @@ function PaymentView() {
     
     if (isCar) {
       const gasFee = Math.round(distance * 20) * trips;
-      const systemFee = 50 * trips;
+      const systemFee = 100 * trips;
       costItemBreakdown = `
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-          <span>ガソリン代実費 (¥${Math.round(distance * 20)} × ${trips}回)</span>
+          <span>送迎パートナー受領実費 (¥${Math.round(distance * 20)} × ${trips}回/収納代行)</span>
           <span style="font-weight:600;">¥${gasFee.toLocaleString()}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-          <span>コミュニティ維持・安全管理料 (¥50 × ${trips}回)</span>
-          <span>¥${systemFee.toLocaleString()}</span>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--primary);">
+          <span>KidsRide システム利用料 (¥100 × ${trips}回/別建て)</span>
+          <span style="font-weight:600;">¥${systemFee.toLocaleString()}</span>
         </div>
       `;
     } else {
-      const systemFee = 50 * trips;
+      const partnerFee = 200 * trips;
+      const systemFee = 100 * trips;
       costItemBreakdown = `
         <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-          <span>必要ポイント (200pt × ${trips}回)</span>
-          <span style="font-weight:600; color:var(--secondary);">${(200 * trips).toLocaleString()} pt</span>
+          <span>送迎パートナー直接謝礼目安 (¥200 × ${trips}回/収納代行)</span>
+          <span style="font-weight:600; color:var(--secondary);">¥${partnerFee.toLocaleString()}</span>
         </div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-          <span>コミュニティ維持・安全管理料 (¥50 × ${trips}回)</span>
-          <span>¥${systemFee.toLocaleString()}</span>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--primary);">
+          <span>KidsRide システム利用料 (¥100 × ${trips}回/別建て)</span>
+          <span style="font-weight:600;">¥${systemFee.toLocaleString()}</span>
         </div>
       `;
     }
   } else if (state.requestForm.frequency === 'monthly') {
     if (state.requestForm.monthlyType === 'dates') {
       planLabel = `月単位日付指定（8月分・計${trips}回・まとめ割）`;
-      if (isCar) {
-        const gasFee = Math.round(distance * 20) * trips;
-        const systemFee = 40 * trips;
-        costItemBreakdown = `
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-            <span>ガソリン代実費 (¥${Math.round(distance * 20)} × ${trips}回)</span>
-            <span style="font-weight:600;">¥${gasFee.toLocaleString()}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-            <span>コミュニティ維持・安全管理料 (割引¥40 × ${trips}回)</span>
-            <span>¥${systemFee.toLocaleString()}</span>
-          </div>
-        `;
-      } else {
-        const systemFee = 40 * trips;
-        costItemBreakdown = `
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-            <span>必要ポイント (200pt × ${trips}回)</span>
-            <span style="font-weight:600; color:var(--secondary);">${(200 * trips).toLocaleString()} pt</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-            <span>コミュニティ維持・安全管理料 (割引¥40 × ${trips}回)</span>
-            <span>¥${systemFee.toLocaleString()}</span>
-          </div>
-        `;
-      }
+      const partnerFee = 200 * trips;
+      const systemFee = 80 * trips;
+      costItemBreakdown = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+          <span>送迎パートナー直接謝礼目安 (¥200 × ${trips}回/収納代行)</span>
+          <span style="font-weight:600; color:var(--secondary);">¥${partnerFee.toLocaleString()}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--primary);">
+          <span>KidsRide システム利用料 (まとめ割 ¥80 × ${trips}回/別建て)</span>
+          <span style="font-weight:600;">¥${systemFee.toLocaleString()}</span>
+        </div>
+      `;
     } else {
       planLabel = '安心月定額プラン（平日使い放題・月20回相当）';
-      if (isCar) {
-        costItemBreakdown = `
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-            <span>定額実費相当分（ガソリン代等の一括清算分）</span>
-            <span style="font-weight:600;">¥3,200</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-            <span>定額コミュニティ維持・安全管理料</span>
-            <span>¥780</span>
-          </div>
-        `;
-      } else {
-        costItemBreakdown = `
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
-            <span>定額必要ポイント (一括消費)</span>
-            <span style="font-weight:600; color:var(--secondary);">4,000 pt</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--text-muted);">
-            <span>定額コミュニティ維持・安全管理料</span>
-            <span>¥1,000</span>
-          </div>
-        `;
-      }
+      costItemBreakdown = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem;">
+          <span>パートナー直接謝礼 一括分 (月20回分/収納代行)</span>
+          <span style="font-weight:600; color:var(--secondary);">¥2,500</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px; font-size:0.9rem; color:var(--primary);">
+          <span>KidsRide 月額システム利用料 (GPS追跡・保険・安全サポート対価)</span>
+          <span style="font-weight:600;">¥1,000</span>
+        </div>
+      `;
     }
   }
   
@@ -1444,9 +1414,12 @@ function PaymentView() {
           <p style="font-weight:700; margin-top:0; margin-bottom:8px; font-size:0.95rem;">【料金の内訳】</p>
           ${costItemBreakdown}
           <hr style="border:none; border-top:1px dashed #ccc; margin:12px 0;">
-          <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.5;">
-            <p style="margin-top:0; font-weight:700; color:var(--primary); margin-bottom:4px;">【コミュニティ維持・安全管理料について】</p>
-            本サービスは、地域の助け合いを安全に行うためのプラットフォームです。利用料は、会員間の身元確認、24時間監視システム、専用保険の維持に充てられます。送迎協力者へは、過分な利益の発生しないガソリン代等の実費相当額のみが支払われます。
+          <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.55; background:#edf2f7; padding:10px 12px; border-radius:6px; margin-top:8px;">
+            <p style="margin-top:0; font-weight:700; color:var(--primary); margin-bottom:4px;">【法令遵守（コンプライアンス）に関するご案内】</p>
+            <ul style="margin:0; padding-left:14px;">
+              <li><strong>資金決済法（収納代行スキーム）</strong>: 送迎謝礼（200円等）は保護者様とパートナー様間の個人の感謝謝礼であり、当法人はその集金・立替受領（収納代行）のみを行います。</li>
+              <li><strong>職業安定法（システム利用料別建て）</strong>: 当法人のシステム利用料（100円）は、プラットフォーム・GPSリアルタイム追跡・見守り保険機能の対価であり、労働の斡旋・紹介手数料ではありません。</li>
+            </ul>
           </div>
         </div>
 
