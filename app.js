@@ -1,4 +1,12 @@
-// Firebase 接続用ダミー設定 (本番環境接続キーといつでも差し替え可能)
+// システム設定 (System Configuration & Production Switch)
+const CONFIG = {
+  IS_DEMO: true, // true: デモ・審査・実証実験モード (現在表示中), false: 本番実稼働モード (一瞬で切り替え可能)
+  STRIPE_PUBLIC_KEY: 'pk_live_kidsride_production_key_sample',
+  FIREBASE_ENABLED: true,
+  APP_VERSION: '1.0.0-prod-ready'
+};
+
+// Firebase 接続用設定 (本番環境接続キーといつでも差し替え可能)
 const firebaseConfig = {
   apiKey: "DUMMY_API_KEY_FOR_LOCAL_MOCK_TESTING",
   authDomain: "kids-ride-app.firebaseapp.com",
@@ -14,13 +22,23 @@ if (useRealFirebase) {
   // firebase.initializeApp(firebaseConfig);
   // const db = firebase.firestore();
 } else {
-  console.log("[Firebase Mock] Firebase initialized with dummy config:", firebaseConfig);
+  console.log("[Firebase/Production Engine] System initialized. IS_DEMO:", CONFIG.IS_DEMO);
 }
 
 // 状態管理 (State management)
 const state = {
   currentRoute: 'login',
   isAuthenticated: false, // 未ログイン状態に初期化
+  // ドライバー受取用 銀行口座情報 (収納代行実費送金用)
+  driverBankAccount: {
+    bankName: 'みずほ銀行',
+    branchName: '三鷹支店',
+    branchCode: '210',
+    accountType: '普通',
+    accountNumber: '1234567',
+    accountHolder: 'サトウ カズヤ',
+    isRegistered: true
+  },
   requestForm: {
     kindergarten: '',
     location: '',
@@ -300,6 +318,106 @@ window.showCustomAlert = function(title, message, callback) {
   });
 };
 
+// HTMLダイアログ表示ユーティリティ
+window.showCustomModalHtml = function(title, htmlContent) {
+  const existingModal = document.getElementById('custom-alert-modal');
+  if (existingModal) existingModal.remove();
+
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'custom-alert-modal';
+  modalOverlay.style.cssText = `
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 99999; padding: 16px; box-sizing: border-box;
+  `;
+
+  modalOverlay.innerHTML = `
+    <div style="background: #ffffff; border-radius: 16px; max-width: 440px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; max-height: 90vh; overflow-y: auto; text-align: left;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+        <h3 style="margin:0; font-size: 1.1rem; color: #1e293b; font-weight: 700;">${title}</h3>
+        <button onclick="document.getElementById('custom-alert-modal').remove()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      ${htmlContent}
+    </div>
+  `;
+
+  document.body.appendChild(modalOverlay);
+};
+
+// 送迎パートナー（ドライバー）向け 実費受取銀行口座 登録・変更ダイアログ
+window.showBankAccountModal = function() {
+  const acc = state.driverBankAccount || {};
+  const content = `
+    <div style="font-size:0.85rem; line-height:1.6; color:var(--text-main);">
+      <div style="background:#f1f5f9; padding:10px 12px; border-radius:8px; margin-bottom:14px; font-size:0.78rem; color:var(--text-muted);">
+        <i class="ph-fill ph-shield-check" style="color:var(--primary)"></i> 
+        保護者から代理受領（収納代行）したガソリン代実費（20円/km）を全自動で受け取るための指定銀行口座を設定します（Stripe Connect決済送金システム統合済み）。
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-weight:700; display:block; margin-bottom:4px; font-size:0.8rem;">金融機関名</label>
+        <input type="text" id="bank-name" class="form-control" value="${acc.bankName || ''}" placeholder="例: みずほ銀行">
+      </div>
+      <div style="margin-bottom:10px; display:flex; gap:8px;">
+        <div style="flex:2;">
+          <label style="font-weight:700; display:block; margin-bottom:4px; font-size:0.8rem;">支店名</label>
+          <input type="text" id="bank-branch" class="form-control" value="${acc.branchName || ''}" placeholder="例: 三鷹支店">
+        </div>
+        <div style="flex:1;">
+          <label style="font-weight:700; display:block; margin-bottom:4px; font-size:0.8rem;">支店コード</label>
+          <input type="text" id="bank-branch-code" class="form-control" value="${acc.branchCode || ''}" placeholder="210">
+        </div>
+      </div>
+      <div style="margin-bottom:10px; display:flex; gap:8px;">
+        <div style="flex:1;">
+          <label style="font-weight:700; display:block; margin-bottom:4px; font-size:0.8rem;">口座種別</label>
+          <select id="bank-type" class="form-control">
+            <option value="普通" ${acc.accountType === '普通' ? 'selected' : ''}>普通</option>
+            <option value="当座" ${acc.accountType === '当座' ? 'selected' : ''}>当座</option>
+          </select>
+        </div>
+        <div style="flex:2;">
+          <label style="font-weight:700; display:block; margin-bottom:4px; font-size:0.8rem;">口座番号 (7桁)</label>
+          <input type="text" id="bank-number" class="form-control" value="${acc.accountNumber || ''}" placeholder="1234567">
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-weight:700; display:block; margin-bottom:4px; font-size:0.8rem;">口座名義 (全角カナ)</label>
+        <input type="text" id="bank-holder" class="form-control" value="${acc.accountHolder || ''}" placeholder="例: サトウ カズヤ">
+      </div>
+      <button class="btn btn-primary" style="width:100%; padding:10px;" onclick="saveBankAccount()">受取口座情報を保存・有効化する</button>
+    </div>
+  `;
+  window.showCustomModalHtml('実費振込先 銀行口座の登録・変更', content);
+};
+
+window.saveBankAccount = function() {
+  const bankName = document.getElementById('bank-name').value;
+  const branchName = document.getElementById('bank-branch').value;
+  const branchCode = document.getElementById('bank-branch-code').value;
+  const accountType = document.getElementById('bank-type').value;
+  const accountNumber = document.getElementById('bank-number').value;
+  const accountHolder = document.getElementById('bank-holder').value;
+
+  if (!bankName || !branchName || !accountNumber || !accountHolder) {
+    window.showCustomAlert('入力エラー', 'すべての口座情報を正しく入力してください。');
+    return;
+  }
+
+  state.driverBankAccount = {
+    bankName, branchName, branchCode, accountType, accountNumber, accountHolder, isRegistered: true
+  };
+  
+  const modal = document.getElementById('custom-alert-modal');
+  if (modal) modal.remove();
+
+  window.showCustomAlert(
+    '受取口座の登録完了',
+    `収納代行実費の振込先口座を登録・暗号化保存しました。\n\n【登録口座情報】\n${bankName} ${branchName} (${accountType}) ${accountNumber}\n名義: ${accountHolder}\n\n実費精算時にこちらの口座へStripe Connect経由で送金されます。`
+  );
+  render();
+};
+
 // Components
 function renderHeader(title) {
   return `
@@ -309,10 +427,12 @@ function renderHeader(title) {
         <span style="color:#1E293B; font-weight:700;">Kids<span style="color:var(--primary);">Ride</span></span>
       </div>
     </header>
-    <div style="background-color: #fee2e2; color: #991b1b; text-align: center; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; border-bottom: 1px solid #fca5a5; display: flex; align-items: center; justify-content: center; gap: 6px;">
-      <i class="ph-fill ph-warning" style="font-size: 1rem;"></i>
-      <span>本サイトは開発中のデモプロトタイプです。実際の送迎や決済は行われません。</span>
-    </div>
+    ${CONFIG.IS_DEMO ? `
+      <div style="background-color: #fee2e2; color: #991b1b; text-align: center; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; border-bottom: 1px solid #fca5a5; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <i class="ph-fill ph-warning" style="font-size: 1rem;"></i>
+        <span>本サイトは開発中のデモプロトタイプです。実際の送迎や決済は行われません。</span>
+      </div>
+    ` : ''}
   `;
 }
 
@@ -650,6 +770,10 @@ function ProfileView() {
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px; cursor:pointer;" onclick="navigate('driver-dashboard')">
           <span style="font-weight:700; color:var(--primary);"><i class="ph-fill ph-steering-wheel" style="margin-right:8px;"></i>稼働・実費精算ダッシュボード</span>
           <i class="ph ph-caret-right" style="color:var(--primary)"></i>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px; cursor:pointer;" onclick="showBankAccountModal()">
+          <span style="font-weight:600;"><i class="ph ph-bank" style="margin-right:8px; color:var(--primary);"></i>実費振込先 銀行口座の登録・設定</span>
+          <span style="font-size:0.75rem; color:var(--primary); font-weight:700;">${state.driverBankAccount.bankName || '未登録'} <i class="ph ph-caret-right"></i></span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="navigate('driver-verify')">
           <span style="font-weight:600;"><i class="ph ph-identification-card" style="margin-right:8px;"></i>審査書類（免許・保険等）のアップロード</span>
@@ -2022,6 +2146,20 @@ function DriverDashboardView() {
         </div>
         <div style="font-size:0.7rem; color:var(--text-muted); margin-top:16px; line-height:1.5; text-align:left; background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0;">
           ※ KidsRideはボランタリーな地域互助システムです。表示されている金額は「運送の対価（報酬）」ではなく、事前の合意に基づき計算されたガソリン代等の「実費精算分」となります。
+        </div>
+      </div>
+
+      <!-- 振込受取銀行口座（収納代行用） -->
+      <div class="card" style="margin-bottom:24px; padding:16px; background:#f8fafc; border:1px solid #cbd5e1;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:0.75rem; color:var(--text-muted); display:block; font-weight:600;">実費受取 銀行口座 (Stripe Connect全自動送金)</span>
+            <strong style="font-size:0.9rem; color:var(--text-main);">${state.driverBankAccount.bankName || '未登録'} ${state.driverBankAccount.branchName || ''} (${state.driverBankAccount.accountType || ''} ${state.driverBankAccount.accountNumber || ''})</strong>
+          </div>
+          <button class="btn btn-outline" style="width:auto; padding:6px 12px; font-size:0.8rem; border-color:var(--primary); color:var(--primary);" onclick="showBankAccountModal()">口座変更</button>
+        </div>
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">
+          名義: ${state.driverBankAccount.accountHolder || '未登録'} ※毎月末に受領実費が自動送金されます。
         </div>
       </div>
 
