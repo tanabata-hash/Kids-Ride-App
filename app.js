@@ -824,6 +824,53 @@ window.updateSpecificTime = function(val) {
   state.requestForm.specificTime = val;
 };
 
+function isFormValid() {
+  const form = state.requestForm;
+  if (!form.kindergarten) return false;
+  if (form.frequency === 'once' && !form.onceDate) return false;
+  if (form.frequency === 'weekly' && form.weeklyDays.length === 0) return false;
+  if (form.frequency === 'monthly' && form.monthlyType === 'dates' && form.monthlyDays.length === 0) return false;
+  return true;
+}
+
+window.submitRequestForm = function(event) {
+  event.preventDefault();
+  const select = document.getElementById('kg-select');
+  const location = document.getElementById('location-input');
+  const otherInput = document.getElementById('kg-other-input');
+  
+  if (select) {
+    if (select.value === 'その他（自由記入）' && otherInput && otherInput.value) {
+      state.requestForm.kindergarten = otherInput.value + '（その他）';
+    } else {
+      state.requestForm.kindergarten = select.value;
+    }
+  }
+  if (location) {
+    state.requestForm.location = location.value;
+  }
+  
+  if (!isFormValid()) {
+    window.showCustomAlert('必要項目を選択してください', '1. 三鷹市内の幼稚園・保育園、および 6. 送迎日 を選択してください。');
+    return;
+  }
+
+  // 自動マッチング時のドライバー決定ロジック
+  if (state.requestForm.selectedDriver === 'おまかせ（自動マッチング）') {
+    const match = driversList.find(d => d.kindergarten === state.requestForm.kindergarten);
+    if (match) {
+      state.requestForm.selectedDriver = match.name;
+    } else {
+      state.requestForm.selectedDriver = driversList[1].name; // 佐藤カズヤをフォールバックに
+    }
+  }
+  
+  // 強制的に最終再計算を走らせる
+  window.calculateEstimation();
+  
+  navigate('payment');
+};
+
 // 幼稚園・保育園の選択変更時のイベントハンドラ
 window.changeKindergarten = function(val) {
   const otherInput = document.getElementById('request-other-kg');
@@ -1211,57 +1258,76 @@ function RequestFormView() {
         ` : ''}
 
         <!-- 料金見積もりカード -->
-        <div class="estimation-card" style="display:flex; flex-direction:column; gap:8px; padding:16px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-            <div>
-              <div class="estimation-title">お見積もり合計額</div>
-              <div class="estimation-trips">
-                ${state.requestForm.frequency === 'once' ? '単発・都度送迎 (計1回)' : ''}
-                ${state.requestForm.frequency === 'weekly' ? `毎週 ${state.requestForm.weeklyDays.length}回指定 (4週分: 計${state.requestForm.estimatedTrips}回)` : ''}
-                ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? `日付指定 (計${state.requestForm.estimatedTrips}回・まとめ割)` : ''}
-                ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'flat' ? `安心月定額 (平日使い放題プラン)` : ''}
+        ${!isFormValid() ? `
+          <div class="estimation-card fade-in" style="display:flex; flex-direction:column; gap:8px; padding:16px; background:#f8fafc; border:1px dashed #cbd5e0; border-radius:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+              <div>
+                <div class="estimation-title" style="color:var(--text-muted);">お見積もり合計額</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">条件を選択すると計算されます</div>
+              </div>
+              <div class="estimation-value" style="text-align:right;">
+                <div class="estimation-price" style="color:#94a3b8; font-size:1.6rem; font-weight:700;">¥ ---</div>
+                <div style="font-size:0.7rem; color:#94a3b8; margin-top:2px;">(必要項目未選択)</div>
               </div>
             </div>
-            <div class="estimation-value" style="text-align:right;">
-              <div class="estimation-price">¥${state.requestForm.estimatedPrice.toLocaleString()}</div>
-              ${state.requestForm.estimatedPoints > 0 ? `
-                <div style="font-size:0.85rem; font-weight:700; color:var(--secondary); margin-top:2px;">+ ${state.requestForm.estimatedPoints.toLocaleString()} pt</div>
-              ` : ''}
-              <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">(実費＋維持管理料込)</div>
+            
+            <div style="border-top:1px dashed #e2e8f0; padding-top:8px; width:100%; font-size:0.75rem; color:var(--text-muted); text-align:center;">
+              💡 1. 幼稚園・保育園、および 6. 送迎日 を選択すると、お見積もりが自動表示されます。
             </div>
           </div>
-          
-          <!-- 料金詳細内訳の表示 -->
-          <div style="border-top:1px dashed #e2e8f0; padding-top:8px; width:100%; font-size:0.75rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
-            <div style="display:flex; justify-content:space-between;">
-              <span>送迎手段:</span>
-              <strong style="color:var(--text-main);">${currentDriverInfo.method}</strong>
+        ` : `
+          <div class="estimation-card fade-in" style="display:flex; flex-direction:column; gap:8px; padding:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+              <div>
+                <div class="estimation-title">お見積もり合計額</div>
+                <div class="estimation-trips">
+                  ${state.requestForm.frequency === 'once' ? '単発・都度送迎 (計1回)' : ''}
+                  ${state.requestForm.frequency === 'weekly' ? `毎週 ${state.requestForm.weeklyDays.length}回指定 (4週分: 計${state.requestForm.estimatedTrips}回)` : ''}
+                  ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? `日付指定 (計${state.requestForm.estimatedTrips}回・まとめ割)` : ''}
+                  ${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'flat' ? `安心月定額 (平日使い放題プラン)` : ''}
+                </div>
+              </div>
+              <div class="estimation-value" style="text-align:right;">
+                <div class="estimation-price">¥${state.requestForm.estimatedPrice.toLocaleString()}</div>
+                ${state.requestForm.estimatedPoints > 0 ? `
+                  <div style="font-size:0.85rem; font-weight:700; color:var(--secondary); margin-top:2px;">+ ${state.requestForm.estimatedPoints.toLocaleString()} pt</div>
+                ` : ''}
+                <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">(実費＋維持管理料込)</div>
+              </div>
             </div>
-            ${isCar ? `
+            
+            <!-- 料金詳細内訳の表示 -->
+            <div style="border-top:1px dashed #e2e8f0; padding-top:8px; width:100%; font-size:0.75rem; color:var(--text-muted); display:flex; flex-direction:column; gap:4px;">
               <div style="display:flex; justify-content:space-between;">
-                <span>片道距離 (直線換算):</span>
-                <strong>約 ${state.requestForm.distanceKm || 2.5} km</strong>
+                <span>送迎手段:</span>
+                <strong style="color:var(--text-main);">${currentDriverInfo.method}</strong>
               </div>
-              <div style="display:flex; justify-content:space-between;">
-                <span>ガソリン代実費 (1回あたり):</span>
-                <strong>約 ¥${Math.round((state.requestForm.distanceKm || 2.5) * 20)}</strong>
-              </div>
-              <div style="display:flex; justify-content:space-between;">
-                <span>システム利用料 (1回あたり):</span>
-                <strong>¥${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? 40 : 50}</strong>
-              </div>
-            ` : `
-              <div style="display:flex; justify-content:space-between;">
-                <span>必要ポイント (1回あたり):</span>
-                <strong style="color:var(--secondary);">200 pt</strong>
-              </div>
-              <div style="display:flex; justify-content:space-between;">
-                <span>システム利用料 (1回あたり):</span>
-                <strong>¥${state.requestForm.frequency === 'monthly' && state.requestForm.monthlyType === 'dates' ? 40 : 50}</strong>
-              </div>
-            `}
+              ${isCar ? `
+                <div style="display:flex; justify-content:space-between;">
+                  <span>片道距離 (直線換算):</span>
+                  <strong>約 ${state.requestForm.distanceKm || 2.5} km</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span>ガソリン代実費 (1回あたり):</span>
+                  <strong>約 ¥${Math.round((state.requestForm.distanceKm || 2.5) * 20)}</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span>当法人手数料 (STEP1非徴収):</span>
+                  <strong style="color:var(--primary);">¥0</strong>
+                </div>
+              ` : `
+                <div style="display:flex; justify-content:space-between;">
+                  <span>必要ポイント (1回あたり):</span>
+                  <strong style="color:var(--secondary);">200 pt</strong>
+                </div>
+                <div style="display:flex; justify-content:space-between;">
+                  <span>現金代金 (STEP1非発生):</span>
+                  <strong style="color:var(--primary);">¥0</strong>
+                </div>
+              `}
+            </div>
           </div>
-        </div>
+        `}
 
         <button type="submit" class="btn btn-primary" style="margin-top:16px;">この内容で依頼する</button>
       </form>
