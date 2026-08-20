@@ -20,7 +20,7 @@ if (useRealFirebase) {
 // 状態管理 (State management)
 const state = {
   currentRoute: 'login',
-  isAuthenticated: true,
+  isAuthenticated: false, // 未ログイン状態に初期化
   requestForm: {
     kindergarten: '',
     location: '',
@@ -227,7 +227,13 @@ window.transitionMarker = function(marker, startLatLng, endLatLng, duration = 20
 };
 
 // Router
+const ADMIN_ROUTES = ['admin', 'facility-admin', 'driver-dashboard'];
+
 function navigate(route) {
+  if (ADMIN_ROUTES.includes(route) && !state.isAuthenticated) {
+    window.showCustomAlert('ログインが必要です', 'このページはログイン後にご利用いただけます。');
+    return;
+  }
   state.currentRoute = route;
   render();
 }
@@ -384,6 +390,7 @@ window.exportCSV = function() {
 
 window.submitLogin = function(event) {
   event.preventDefault();
+  state.isAuthenticated = true; // ログイン成功フラグ
   navigate('dashboard');
 };
 
@@ -414,15 +421,14 @@ function AuthLoginView() {
           <span style="font-size: 1.2rem;">💡</span> KidsRide サービス概要とフェーズ（STEP 1）
         </h3>
         <p style="font-size: 0.8rem; line-height: 1.5; color: var(--text-main); margin-bottom: 10px;">
-          KidsRideは、保護者・地域ボランティアドライバー・施設をつなぐ<strong>「子ども送迎・見守り互助プラットフォーム」</strong>です。現在は【STEP 1：ボランティア実証実験期】として、道路運送法・資金決済法・職業安定法を完全遵守して運営しています。
+          KidsRideは、保護者・地域ボランティアドライバー・施設をつなぐ<strong>「子ども送迎・見守り互助プラットフォーム」</strong>です。現在は【STEP 1：ボランティア実証実験期】として、道路運送法・資金決済法・職業安定法上の課題を整理し、非該当となるよう設計・運営しています（国土交通省 東京運輸支局への確認を進めています）。
         </p>
         <div style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
-          <strong>STEP 1 実証実験期の完全法的適合仕様:</strong>
+          <strong>STEP 1 実証実験期の仕様:</strong>
           <ul style="margin: 4px 0 0 16px; padding: 0;">
-            <li><strong>個別送迎手数料ゼロ（Uberリスク回避）</strong>: 送迎1回ごとの当法人システム手数料は¥0（無徴収）</li>
+            <li><strong>送迎手数料</strong>: 送迎1回ごとの当法人システム手数料は¥0（無徴収）</li>
             <li><strong>車・バイク送迎</strong>: ドライバー利益ゼロ・純粋なガソリン代実費（20円/km）のみ</li>
             <li><strong>徒歩・自転車送迎</strong>: 現金非発生・相互扶助ポイント（200pt）消費のみ</li>
-            <li><strong>ポイント購入（チャージ）</strong>: 有効期限5ヶ月29日（6ヶ月未満・資金決済法非該当）</li>
           </ul>
         </div>
       </div>
@@ -616,15 +622,14 @@ function ProfileView() {
 
       <h3 style="margin-top:24px; font-size:1.1rem; color:var(--text-main);">相互扶助ポイント（徒歩・自転車送迎用）</h3>
       <div class="card" style="margin-bottom:16px; padding:16px; background:#fafdfb; border:1px solid #c6f6d5;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <span style="font-size:0.8rem; color:var(--text-muted); display:block;">保有ポイント（次回期限: 5ヶ月29日後）</span>
+            <span style="font-size:0.8rem; color:var(--text-muted); display:block;">保有相互扶助ポイント</span>
             <strong style="font-size:1.5rem; color:var(--secondary);">1,000 pt</strong>
           </div>
-          <button class="btn" style="width:auto; padding:6px 14px; font-size:0.85rem; background:var(--secondary); color:#fff; font-weight:700;" onclick="showPointChargeModal()">ポイントチャージ</button>
         </div>
-        <p style="font-size:0.75rem; color:var(--text-muted); margin:0; line-height:1.45;">
-          ※新規無料プレゼントポイントです。アプリ内購入（チャージ有効期限6ヶ月未満・資金決済法非該当）または助け合い送迎でポイントが貯まります。
+        <p style="font-size:0.75rem; color:var(--text-muted); margin:8px 0 0 0; line-height:1.45;">
+          ※登録時初期付与ポイントです。地域の助け合い送迎（自分が送迎をお手伝いすること）でポイントが貯まります。
         </p>
       </div>
 
@@ -1438,9 +1443,8 @@ function PaymentView() {
           <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.55; background:#edf2f7; padding:10px 12px; border-radius:6px; margin-top:8px;">
             <p style="margin-top:0; font-weight:700; color:var(--primary); margin-bottom:4px;">【STEP 1 実証実験期 法令遵守（コンプライアンス）のご案内】</p>
             <ul style="margin:0; padding-left:14px;">
-              <li><strong>道路運送法（Uberリスク回避）</strong>: 個別送迎に紐づく当法人の手数料徴収はゼロ（¥0）です。車・バイクは純粋なガソリン代実費（20円/km）のみの精算であり、ドライバー利益は一切発生しません。</li>
-              <li><strong>資金決済法（ポイント有効期限）</strong>: 徒歩送迎等で消費する相互扶助ポイントのチャージ購入有効期限は購入から5ヶ月29日（6ヶ月未満・資金決済法非該当）です。</li>
-              <li><strong>職業安定法</strong>: 個別送迎からの手数料天引きを行わない独立構造です。</li>
+              <li><strong>道路運送法</strong>: 個別送迎に紐づく当法人の手数料徴収はゼロ（¥0）です。車・バイクは純粋なガソリン代実費（20円/km）のみの精算であり、ドライバー利益は一切発生しません。</li>
+              <li><strong>資金決済法・職業安定法</strong>: 個別送迎からの手数料天引きを行わない独立構造とし、関係省庁・行政機関への事前確認・検討を進めています。</li>
             </ul>
           </div>
         </div>
