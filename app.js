@@ -494,6 +494,10 @@ window.submitRegistration = function(event) {
 };
 
 window.exportCSV = function() {
+  if (!state.isAuthenticated) {
+    showCustomAlert('アクセス拒否', 'この操作を実行するにはログインが必要です。');
+    return;
+  }
   const DB_KEY = 'kidsride_users_db';
   let db = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
   if (db.length === 0) {
