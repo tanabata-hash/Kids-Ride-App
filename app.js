@@ -2281,44 +2281,149 @@ function AdminView() {
 
 function FacilityAdminView() {
   return `
-    ${renderHeader('【提携施設用】ダッシュボード')}
-    <main class="fade-in" style="padding-top:20px; padding-bottom: 20px;">
-      <div class="card" style="background: linear-gradient(135deg, #1d4ed8, #3b82f6); color: white; margin-bottom:24px;">
-        <h2 style="color: white; font-size:1.1rem; margin-top:0;">三鷹市立大沢保育園 様</h2>
-        <p style="color: rgba(255,255,255,0.9); margin-top:4px; font-size:0.9rem;">本日の送迎予定（システム管理）</p>
+    ${renderHeader('【提携施設用】送迎・引き渡し管理')}
+    <main class="fade-in" style="padding-top:16px; padding-bottom: 30px;">
+      <!-- 施設ヘッダー -->
+      <div class="card" style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; margin-bottom:16px; box-shadow: var(--shadow-md);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div>
+            <span style="font-size:0.75rem; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px; font-weight:600;">提携施設専用ポータル</span>
+            <h2 style="color: white; font-size:1.2rem; margin:6px 0 2px 0;">三鷹市立大沢保育園 様</h2>
+            <p style="color: rgba(255,255,255,0.85); margin:0; font-size:0.8rem;">本日の送迎・園児引き渡し状況モニタリング</p>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:0.7rem; color:rgba(255,255,255,0.8); display:block;">現在時刻</span>
+            <strong style="font-size:1.1rem; color:#fef08a;">16:55</strong>
+          </div>
+        </div>
       </div>
 
-      <div class="card" style="padding:0; overflow:hidden; border: 1px solid #e2e8f0;">
-        <table style="width:100%; border-collapse:collapse; font-size:0.8rem; text-align:left;">
-          <tr style="background:#f8fafc; border-bottom:1px solid #cbd5e1;">
-            <th style="padding:12px 8px; font-weight:700; color:var(--text-main);">児童名</th>
-            <th style="padding:12px 8px; font-weight:700; color:var(--text-main);">送迎者</th>
-            <th style="padding:12px 8px; font-weight:700; color:var(--text-main);">予定</th>
-            <th style="padding:12px 8px; font-weight:700; color:var(--text-main);">状況</th>
-          </tr>
-          <tr style="border-bottom:1px solid #e2e8f0;">
-            <td style="padding:12px 8px; font-weight:600;">山田 太郎 (4歳)</td>
-            <td style="padding:12px 8px;">高橋 ケンタ</td>
-            <td style="padding:12px 8px;">17:00</td>
-            <td style="padding:12px 8px;"><span style="background:#fef08a; color:#854d0e; padding:4px 6px; border-radius:12px; font-weight:700; display:inline-block; font-size:0.7rem;">迎車中</span></td>
-          </tr>
-          <tr style="border-bottom:1px solid #e2e8f0;">
-            <td style="padding:12px 8px; font-weight:600;">鈴木 アリサ (3歳)</td>
-            <td style="padding:12px 8px;">佐藤 カズヤ</td>
-            <td style="padding:12px 8px;">17:30</td>
-            <td style="padding:12px 8px;"><span style="background:#f1f5f9; color:#475569; padding:4px 6px; border-radius:12px; font-weight:700; display:inline-block; font-size:0.7rem;">待機中</span></td>
-          </tr>
-          <tr>
-            <td style="padding:12px 8px; font-weight:600;">佐藤 健太 (6歳)</td>
-            <td style="padding:12px 8px;">渡辺 ユウキ</td>
-            <td style="padding:12px 8px;">16:00</td>
-            <td style="padding:12px 8px;"><span style="background:#dcfce7; color:#166534; padding:4px 6px; border-radius:12px; font-weight:700; display:inline-block; font-size:0.7rem;">送迎完了</span></td>
-          </tr>
-        </table>
+      <!-- 本日のステータスサマリー -->
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:16px;">
+        <div class="card" style="padding:10px; text-align:center; margin:0; background:#fefce8; border:1px solid #fef08a;">
+          <span style="font-size:0.7rem; color:#854d0e; font-weight:700; display:block;">迎車中 (接近中)</span>
+          <strong style="font-size:1.4rem; color:#a16207;">1<span style="font-size:0.8rem;"> 件</span></strong>
+        </div>
+        <div class="card" style="padding:10px; text-align:center; margin:0; background:#f8fafc; border:1px solid #e2e8f0;">
+          <span style="font-size:0.7rem; color:#475569; font-weight:700; display:block;">待機中</span>
+          <strong style="font-size:1.4rem; color:#334155;">1<span style="font-size:0.8rem;"> 件</span></strong>
+        </div>
+        <div class="card" style="padding:10px; text-align:center; margin:0; background:#f0fdf4; border:1px solid #bbf7d0;">
+          <span style="font-size:0.7rem; color:#166534; font-weight:700; display:block;">引き渡し完了</span>
+          <strong style="font-size:1.4rem; color:#15803d;">2<span style="font-size:0.8rem;"> 件</span></strong>
+        </div>
       </div>
 
-      <div style="margin-top:24px; text-align:center;">
-        <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">施設管理者様は、本日到着予定・出発予定の児童の状況や、担当送迎者が誰かという情報を一元管理することで、引き渡しのリスクを大幅に軽減できます。</p>
+      <!-- 接近中アラートバナー -->
+      <div class="card" style="background:#fffbeb; border:1px solid #fde68a; padding:12px; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+        <span style="width:10px; height:10px; background:#f59e0b; border-radius:50%; display:inline-block; animation:pulse 1s infinite;"></span>
+        <div style="flex:1;">
+          <strong style="font-size:0.85rem; color:#92400e; display:block;">【接近アラート】高橋 ケンタ 様が園の半径500m圏内に入りました</strong>
+          <span style="font-size:0.72rem; color:#b45309;">山田 太郎 くん（4歳・きりん組）のお迎え準備をお願いします（到着見込: あと約5分）</span>
+        </div>
+      </div>
+
+      <!-- 統合リスト表記コンテナ -->
+      <div class="card" style="padding:0; overflow:hidden; border: 1px solid #e2e8f0; margin-bottom:20px; box-shadow: var(--shadow-sm);">
+        <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-list-bullets" style="color:var(--primary); font-size:1.1rem;"></i> 送迎・引き渡し対象 児童リスト
+          </span>
+          <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">全3名</span>
+        </div>
+
+        <!-- リスト行 1 (迎車中・接近中) -->
+        <div style="padding:14px; border-bottom:1px solid #e2e8f0; border-left:4px solid #f59e0b; background:#fffdfa;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:0.72rem; background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:700;">きりん組 (4歳児)</span>
+              <strong style="font-size:1rem; color:var(--text-main);">山田 太郎 くん</strong>
+            </div>
+            <span style="background:#fef08a; color:#854d0e; padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem; display:flex; align-items:center; gap:4px;">
+              <span style="width:6px; height:6px; background:#eab308; border-radius:50%; display:inline-block; animation:pulse 1s infinite;"></span>
+              迎車中 (17:00予定)
+            </span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 10px; border-radius:6px; margin-bottom:10px; border:1px solid #f1f5f9;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=kenta" alt="Driver" class="avatar" style="width:36px; height:36px; border:1px solid #cbd5e1;">
+              <div>
+                <span style="font-size:0.85rem; font-weight:700; color:var(--text-main);">送迎者: 高橋 ケンタ 様</span>
+                <span style="font-size:0.72rem; color:var(--text-muted); display:block;"><i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 同一施設保護者 (認証済) / <i class="ph-fill ph-car"></i> 車送迎</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" style="flex:2; padding:8px 10px; font-size:0.8rem; font-weight:700;" onclick="showCustomAlert('引き渡し確認', '山田 太郎 くんの引き渡しを確認・記録しました！\n保護者へ引き渡し完了通知を送信しました。')">
+              <i class="ph-fill ph-check"></i> 顔写真を確認して引き渡し完了
+            </button>
+            <button class="btn btn-outline" style="flex:1; padding:8px 10px; font-size:0.8rem;" onclick="showCustomAlert('位置情報', '高橋様の現在地: 連雀通り 三鷹台方面より移動中（GPS正常受信中）')">
+              現在地確認
+            </button>
+          </div>
+        </div>
+
+        <!-- リスト行 2 (待機中) -->
+        <div style="padding:14px; border-bottom:1px solid #e2e8f0; border-left:4px solid #94a3b8;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:0.72rem; background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-weight:700;">うさぎ組 (3歳児)</span>
+              <strong style="font-size:1rem; color:var(--text-main);">鈴木 アリサ ちゃん</strong>
+            </div>
+            <span style="background:#f1f5f9; color:#475569; padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">
+              待機中 (17:30予定)
+            </span>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 10px; border-radius:6px; margin-bottom:10px; border:1px solid #f1f5f9;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user" alt="Driver" class="avatar" style="width:36px; height:36px; border:1px solid #cbd5e1;">
+              <div>
+                <span style="font-size:0.85rem; font-weight:700; color:var(--text-main);">送迎者: 佐藤 カズヤ 様</span>
+                <span style="font-size:0.72rem; color:var(--text-muted); display:block;"><i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 同一施設保護者 (認証済) / <i class="ph-fill ph-bicycle"></i> 自転車送迎</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline" style="flex:1; padding:8px 10px; font-size:0.8rem; border-color:#cbd5e1; color:#64748b;" onclick="showCustomAlert('引き渡し準備', '17:30の予定です。送迎者が園に近づき次第、自動で接近アラートが表示されます。')">
+              引き渡し準備中
+            </button>
+          </div>
+        </div>
+
+        <!-- リスト行 3 (引き渡し完了) -->
+        <div style="padding:14px; border-left:4px solid #22c55e; background:#fafffa; opacity:0.9;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:0.72rem; background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-weight:700;">らいおん組 (6歳児)</span>
+              <strong style="font-size:1rem; color:var(--text-main);">佐藤 健太 くん</strong>
+            </div>
+            <span style="background:#dcfce7; color:#166534; padding:3px 8px; border-radius:12px; font-weight:700; font-size:0.75rem;">
+              引き渡し完了 (16:05)
+            </span>
+          </div>
+
+          <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center;">
+            <span>送迎者: 渡辺 ユウキ 様（徒歩送迎）</span>
+            <span style="color:#64748b;">担当保育士: 田中</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 安全管理・誤認防止プロトコル -->
+      <div class="card" style="background:#f8fafc; border:1px dashed #cbd5e1; padding:12px 16px; margin-bottom:20px;">
+        <h4 style="margin:0 0 6px 0; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-shield-check"></i> 誤認引き渡し・連れ去り防止プロトコル
+        </h4>
+        <p style="font-size:0.73rem; color:var(--text-muted); margin:0; line-height:1.45;">
+          KidsRide提携施設システムでは、事前登録された保護者と認証済みの送迎パートナーのみが表示されます。GPS位置情報による接近検知と顔写真照合により、確実かつ安全な園児の引き渡しを保証します。
+        </p>
+      </div>
+
+      <div style="text-align:center;">
         <button class="btn btn-outline" onclick="navigate('login')" style="width:auto; padding: 8px 24px;">通常のログイン画面へ戻る</button>
       </div>
     </main>
