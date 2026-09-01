@@ -32,10 +32,163 @@ if (useRealFirebase) {
   console.log("[Firebase/Production Engine] System initialized. IS_DEMO:", CONFIG.IS_DEMO);
 }
 
+// ============================================================================
+// KidsRide 法的ガードレール・ポイント＆実費精算ロジック (Ver.6準拠)
+// ============================================================================
+
+class ComplianceError extends Error {
+  constructor(message, code) {
+    super(message);
+    this.name = "ComplianceError";
+    this.code = code;
+  }
+}
+
+const TransportType = Object.freeze({
+  CAR: "car",
+  BIKE: "bike",
+  WALK: "walk",
+  CYCLE: "cycle",
+});
+
+const ACTUAL_COST_TRANSPORT_TYPES = new Set([TransportType.CAR, TransportType.BIKE]);
+const POINTS_ONLY_TRANSPORT_TYPES = new Set([TransportType.WALK, TransportType.CYCLE]);
+
+const PaymentType = Object.freeze({
+  ACTUAL_COST: "actual_cost",
+  SYSTEM_FEE: "system_fee",
+  COURTESY_FEE: "courtesy_fee",
+});
+
+const SettlementMethod = Object.freeze({
+  DIRECT_CASH: "direct_cash",
+  DIRECT_POINTS: "direct_points",
+  PSP_SPLIT: "psp_split",
+});
+
+const PointsTransactionType = Object.freeze({
+  EARN_NONMONETARY: "earn_nonmonetary",
+  PURCHASE: "purchase",
+  CONSUME: "consume",
+});
+
+function purchasePoints({ userId, amountJPY }) {
+  if (!userId) throw new ComplianceError("userId is required", "MISSING_USER");
+  if (!Number.isFinite(amountJPY) || amountJPY <= 0) {
+    throw new ComplianceError("amountJPY must be a positive number", "INVALID_AMOUNT");
+  }
+  return {
+    transaction_type: PointsTransactionType.PURCHASE,
+    amount_points: amountJPY,
+    source: "money_purchase",
+  };
+}
+
+function settleWalkCycleRideWithPoints({ transportType, requesterId, transporterId, pointsAmount }) {
+  if (!POINTS_ONLY_TRANSPORT_TYPES.has(transportType)) {
+    throw new ComplianceError(`transportType "${transportType}" は徒歩・自転車向けの関数では扱えません`, "INVALID_TRANSPORT_TYPE");
+  }
+  if (!Number.isFinite(pointsAmount) || pointsAmount <= 0) {
+    throw new ComplianceError("pointsAmount must be a positive number", "INVALID_AMOUNT");
+  }
+  return {
+    payment: {
+      payer_id: requesterId,
+      payee_id: transporterId,
+      type: PaymentType.COURTESY_FEE,
+      settlement_method: SettlementMethod.DIRECT_POINTS,
+    },
+    points: {
+      transaction_type: PointsTransactionType.CONSUME,
+      amount_points: pointsAmount,
+      cash_convertible: false,
+    },
+  };
+}
+
+function redeemWalkCyclePointsForCash() {
+  throw new ComplianceError(
+    "徒歩・自転車のポイントは換金できません（points.cash_convertible = false固定）。" +
+      "現金報酬の導入はSTEP2以降、運輸支局への別途照会後に検討します。",
+    "WALK_CYCLE_REDEMPTION_NOT_ALLOWED"
+  );
+}
+
+function settleCarBikeActualCost({ transportType, requesterId, driverId, actualCostAmount, method }) {
+  if (!ACTUAL_COST_TRANSPORT_TYPES.has(transportType)) {
+    throw new ComplianceError(`transportType "${transportType}" は車・バイク向けの関数では扱えません`, "INVALID_TRANSPORT_TYPE");
+  }
+  if (!Number.isFinite(actualCostAmount) || actualCostAmount <= 0) {
+    throw new ComplianceError("actualCostAmount must be a positive number", "INVALID_AMOUNT");
+  }
+  if (!Object.values(SettlementMethod).includes(method)) {
+    throw new ComplianceError(`invalid settlement method: ${method}`, "INVALID_METHOD");
+  }
+  return {
+    ride: { transport_type: transportType, actual_cost_amount: actualCostAmount },
+    payment: {
+      payer_id: requesterId,
+      payee_id: driverId,
+      type: PaymentType.ACTUAL_COST,
+      settlement_method: method,
+    },
+  };
+}
+
+function validateAndRedeemCarBikePoints({ transporterId, redemptionAmountJPY, rides }) {
+  if (!transporterId) throw new ComplianceError("transporterId is required", "MISSING_USER");
+  if (!Array.isArray(rides) || rides.length === 0) {
+    throw new ComplianceError("rides must be a non-empty array", "MISSING_RIDES");
+  }
+  if (!Number.isFinite(redemptionAmountJPY) || redemptionAmountJPY <= 0) {
+    throw new ComplianceError("redemptionAmountJPY must be a positive number", "INVALID_AMOUNT");
+  }
+  for (const ride of rides) {
+    if (!ACTUAL_COST_TRANSPORT_TYPES.has(ride.transportType)) {
+      throw new ComplianceError(`徒歩・自転車の送迎は換金対象外です`, "INVALID_TRANSPORT_TYPE");
+    }
+    if (!Number.isFinite(ride.actualCostAmount) || ride.actualCostAmount < 0) {
+      throw new ComplianceError(`invalid actualCostAmount for ride ${ride.rideId}`, "INVALID_AMOUNT");
+    }
+  }
+  const capJPY = rides.reduce((sum, ride) => sum + ride.actualCostAmount, 0);
+  if (redemptionAmountJPY > capJPY) {
+    throw new ComplianceError(
+      `換金額（¥${redemptionAmountJPY.toLocaleString()}）が対象送迎の実費相当額合計（¥${capJPY.toLocaleString()}）を超えています。実費相当額を超える換金は有償旅客運送に該当する可能性があるため許可できません。`,
+      "REDEMPTION_EXCEEDS_ACTUAL_COST"
+    );
+  }
+  return {
+    approved: true,
+    redemptionAmountJPY,
+    capJPY,
+    payment: { point_redemption_cap: capJPY },
+  };
+}
+
 // 状態管理 (State management)
 const state = {
   currentRoute: 'login',
   isAuthenticated: false, // 未ログイン状態に初期化
+  // 保護者保有ポイント (消費専用・換金不可)
+  userPoints: 1000,
+  // ポイント購入/消費トランザクション履歴
+  pointTransactions: [
+    {
+      id: 'tx_init_1',
+      timestamp: '2026-08-01 10:00',
+      type: PointsTransactionType.EARN_NONMONETARY,
+      amount: 1000,
+      description: '新規登録初期プレゼント付与'
+    }
+  ],
+  // 送迎者（ドライバー）側の保有資産状態
+  driverPoints: 400, // 徒歩・自転車送迎等で獲得した非換金相互扶助ポイント
+  driverCarActualCostEligible: 2400, // 車送迎の実費精算上限可能額 (円)
+  driverCompletedRides: [
+    { rideId: 'ride_demo_1', transportType: TransportType.CAR, actualCostAmount: 1200, date: '8/20' },
+    { rideId: 'ride_demo_2', transportType: TransportType.CAR, actualCostAmount: 1200, date: '8/22' }
+  ],
   // ガソリン単価改訂の監査ログ（東京運輸支局提示用）
   gasRateAuditLogs: [
     {
@@ -765,15 +918,18 @@ function ProfileView() {
       </div>
 
       <h3 style="margin-top:24px; font-size:1.1rem; color:var(--text-main);">相互扶助ポイント（徒歩・自転車送迎用）</h3>
-      <div class="card" style="margin-bottom:16px; padding:16px; background:#fafdfb; border:1px solid #c6f6d5;">
+      <div class="card" style="margin-bottom:16px; padding:16px; background:#fafdfb; border:1px solid #c6f6d5; box-shadow: var(--shadow-sm);">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <span style="font-size:0.8rem; color:var(--text-muted); display:block;">保有相互扶助ポイント</span>
-            <strong style="font-size:1.5rem; color:var(--secondary);">1,000 pt</strong>
+            <span style="font-size:0.8rem; color:var(--text-muted); display:block; font-weight:600;">保有相互扶助ポイント</span>
+            <strong style="font-size:1.6rem; color:var(--secondary);">${state.userPoints.toLocaleString()} pt</strong>
           </div>
+          <button class="btn btn-secondary" style="width:auto; padding:8px 14px; font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:6px;" onclick="window.showPointChargeModal()">
+            <i class="ph-fill ph-plus-circle"></i> ポイント購入（チャージ）
+          </button>
         </div>
-        <p style="font-size:0.75rem; color:var(--text-muted); margin:8px 0 0 0; line-height:1.45;">
-          ※登録時初期付与ポイントです。地域の助け合い送迎（自分が送迎をお手伝いすること）でポイントが貯まります。
+        <p style="font-size:0.75rem; color:var(--text-muted); margin:10px 0 0 0; line-height:1.45; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+          ※購入されたポイントは送迎依頼の消費専用です。換金・払い戻しはできません（資金決済法・道路運送法準拠）。助け合い送迎（自分が送迎をお手伝いすること）でもポイントが貯まります。
         </p>
       </div>
 
@@ -1543,12 +1699,81 @@ function RequestFormView() {
 }
 
 window.submitPayment = function(event, method = 'クレジットカード') {
-  if(event) event.preventDefault();
+  if (event) event.preventDefault();
+  
+  const currentDriverInfo = driversList.find(d => d.name === state.requestForm.selectedDriver) || driversList[0];
+  const isCar = (currentDriverInfo.methodType === 'Car' || currentDriverInfo.methodType === 'Motorcycle' || currentDriverInfo.methodType === 'Unknown');
   const price = state.requestForm.estimatedPrice;
-  showCustomAlert('決済完了', `【${method}】にて${price.toLocaleString()}円の決済が完了しました！送迎者とのマッチングを開始します。`, () => {
-    state.requestForm.isBooked = true; // 予約完了フラグ
-    navigate('active');
-  });
+  const points = state.requestForm.estimatedPoints;
+
+  try {
+    if (!isCar) {
+      // 徒歩・自転車：相互扶助ポイント消費
+      if (state.userPoints < points) {
+        showCustomAlert(
+          'ポイント不足',
+          `保有ポイントが不足しています（必要: ${points} pt / 保有: ${state.userPoints} pt）。\n「ポイント購入（チャージ）」または送迎協力によるポイント獲得を行ってください。`,
+          () => window.showPointChargeModal()
+        );
+        return;
+      }
+      
+      const settlement = settleWalkCycleRideWithPoints({
+        transportType: TransportType.WALK,
+        requesterId: 'current_parent',
+        transporterId: 'driver_user',
+        pointsAmount: points,
+      });
+
+      // ユーザー残高更新
+      state.userPoints -= points;
+      state.driverPoints += points; // 送迎者へ移転（非換金）
+      state.pointTransactions.push({
+        id: 'tx_consume_' + Date.now(),
+        timestamp: new Date().toLocaleString(),
+        type: PointsTransactionType.CONSUME,
+        amount: points,
+        description: `徒歩・自転車送迎依頼での消費 (${state.requestForm.kindergarten})`
+      });
+
+      showCustomAlert(
+        '依頼完了（ポイント消費）',
+        `相互扶助ポイント【${points} pt】を消費して送迎依頼を確定しました！（残高: ${state.userPoints} pt）\n送迎者とのマッチングおよび現在地追跡を開始します。`,
+        () => {
+          state.requestForm.isBooked = true;
+          navigate('active');
+        }
+      );
+    } else {
+      // 車・バイク：ガソリン実費直接精算
+      const settlement = settleCarBikeActualCost({
+        transportType: TransportType.CAR,
+        requesterId: 'current_parent',
+        driverId: 'driver_user',
+        actualCostAmount: price,
+        method: method === 'ポイント決済' ? SettlementMethod.DIRECT_POINTS : SettlementMethod.DIRECT_CASH,
+      });
+
+      state.driverCarActualCostEligible += price;
+      state.driverCompletedRides.push({
+        rideId: 'ride_' + Date.now(),
+        transportType: TransportType.CAR,
+        actualCostAmount: price,
+        date: '本日'
+      });
+
+      showCustomAlert(
+        '実費精算完了',
+        `【${method}】にてガソリン代実費【${price.toLocaleString()}円】の精算が完了しました！（プラットフォーム個別手数料: ¥0）\n送迎者とのマッチングおよび現在地追跡を開始します。`,
+        () => {
+          state.requestForm.isBooked = true;
+          navigate('active');
+        }
+      );
+    }
+  } catch (err) {
+    showCustomAlert('エラー', err.message || '精算処理中にエラーが発生しました。');
+  }
 };
 
 function PaymentView() {
@@ -2268,19 +2493,34 @@ function DriverDashboardView() {
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:24px; text-align:center; border: 2px solid var(--primary); background: #fffaf0;">
-        <p style="margin-top:0; font-size:0.95rem; font-weight:700; color:var(--primary);">今月の稼働サマリー（実費精算実績）</p>
-        <div style="display:flex; justify-content:space-around; margin-top:16px; align-items:center;">
-          <div>
-            ${estimationSummaryHtml}
+      <!-- 実費精算 ＆ 相互扶助ポイント サマリーカード -->
+      <div class="card" style="margin-bottom:24px; border: 2px solid var(--primary); background: #fffaf0; padding: 16px;">
+        <h4 style="margin-top:0; font-size:0.95rem; font-weight:700; color:var(--primary); text-align:center; margin-bottom:12px;">今月の稼働・受取資産サマリー</h4>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <!-- 車送迎 実費精算可能額 -->
+          <div style="background:white; border:1px solid #fed7aa; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;"><i class="ph-fill ph-car"></i> 車送迎 ガソリン実費</div>
+            <div style="font-size:1.5rem; font-weight:700; color:var(--primary); margin: 4px 0;"><span style="font-size:1rem;">¥</span>${state.driverCarActualCostEligible.toLocaleString()}</div>
+            <button class="btn btn-primary" style="width:100%; padding:6px 8px; font-size:0.75rem; font-weight:700;" onclick="window.showRedeemCarBikeModal()">
+              実費精算（出金）申請
+            </button>
           </div>
-          <div style="width:1px; background:#e2e8f0; height:40px;"></div>
-          <div>
-            ${earningsSummaryHtml}
+
+          <!-- 徒歩・自転車 獲得ポイント (非換金) -->
+          <div style="background:white; border:1px solid #bbf7d0; border-radius:8px; padding:12px; text-align:center;">
+            <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600;"><i class="ph-fill ph-bicycle"></i> 徒歩・自転車 互助pt</div>
+            <div style="font-size:1.5rem; font-weight:700; color:var(--secondary); margin: 4px 0;">${state.driverPoints.toLocaleString()}<span style="font-size:0.9rem;"> pt</span></div>
+            <button class="btn btn-outline" style="width:100%; padding:6px 8px; font-size:0.75rem; font-weight:700; border-color:var(--secondary); color:var(--secondary);" onclick="window.tryRedeemWalkCyclePoints()">
+              換金について（不可）
+            </button>
           </div>
         </div>
-        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:16px; line-height:1.5; text-align:left; background:#f8fafc; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0;">
-          ※ KidsRideはボランタリーな地域互助システムです。表示されている金額は「運送の対価（報酬）」ではなく、事前の合意に基づき計算されたガソリン代等の「実費精算分」となります。
+
+        <div style="font-size:0.7rem; color:var(--text-muted); line-height:1.45; background:#f8fafc; padding:8px 10px; border-radius:6px; border:1px solid #e2e8f0; text-align:left;">
+          <strong>【法的区分のご案内】</strong><br>
+          ・<strong>車送迎の実費精算</strong>: 走行距離に応じたガソリン代実費（11円〜20円/km）の上限範囲内でのみ精算・出金が承認されます（利益発生防止）。<br>
+          ・<strong>徒歩・自転車のポイント</strong>: 児童福祉法上の地域ボランティア互助規程に基づき<strong>換金・出金は一切不可</strong>（非金銭）です。ご自身が送迎を依頼する際の消費ポイントとしてご利用いただけます。
         </div>
       </div>
 
@@ -2450,11 +2690,202 @@ function render() {
   }
 }
 
+// ============================================================================
+// ポイント購入（チャージ）＆ 実費換金 モーダルUI
+// ============================================================================
+
 window.showPointChargeModal = function() {
-  showCustomAlert(
-    '相互扶助ポイント チャージ（購入）',
-    '【1,000 pt パック（¥1,000）】\n・有効期限: 購入日より5ヶ月29日（6ヶ月未満・資金決済法非該当）\n・用途: 徒歩・自転車送迎の依頼時消費\n\n※デモ環境のため実際の発注決済は行われません。デモポイントが追加されました。'
-  );
+  const existingModal = document.getElementById('point-charge-modal');
+  if (existingModal) existingModal.remove();
+
+  const modalHtml = `
+    <div id="point-charge-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; transition: opacity 0.25s ease;">
+      <div style="background: white; width: 92%; max-width: 420px; padding: 24px; border-radius: 16px; box-shadow: var(--shadow-xl); transform: scale(0.9); transition: transform 0.25s ease; max-height: 90vh; overflow-y: auto;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin: 0; color: var(--text-main); font-size: 1.15rem; font-weight: 700; display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-coins" style="color:var(--secondary); font-size:1.4rem;"></i> ポイント購入（チャージ）
+          </h3>
+          <button onclick="document.getElementById('point-charge-modal').remove()" style="background:none; border:none; font-size:1.4rem; color:var(--text-muted); cursor:pointer;">×</button>
+        </div>
+
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:16px;">
+          <div style="font-size:0.8rem; color:var(--text-muted);">現在の保有ポイント</div>
+          <div style="font-size:1.6rem; font-weight:700; color:var(--secondary);">${state.userPoints.toLocaleString()} pt</div>
+        </div>
+
+        <label style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:8px;">購入パックの選択</label>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+          <label style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:2px solid var(--secondary); border-radius:8px; cursor:pointer; background:#fafdfb;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="radio" name="charge_pack" value="1000" checked>
+              <div>
+                <strong style="font-size:1rem; display:block;">1,000 pt パック</strong>
+                <span style="font-size:0.75rem; color:var(--text-muted);">徒歩・自転車送迎 約5回分</span>
+              </div>
+            </div>
+            <strong style="font-size:1.1rem; color:var(--text-main);">¥1,000</strong>
+          </label>
+
+          <label style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="radio" name="charge_pack" value="3000">
+              <div>
+                <strong style="font-size:1rem; display:block;">3,000 pt パック</strong>
+                <span style="font-size:0.75rem; color:var(--text-muted);">徒歩・自転車送迎 約15回分</span>
+              </div>
+            </div>
+            <strong style="font-size:1.1rem; color:var(--text-main);">¥3,000</strong>
+          </label>
+
+          <label style="display:flex; justify-content:space-between; align-items:center; padding:12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <input type="radio" name="charge_pack" value="5000">
+              <div>
+                <strong style="font-size:1rem; display:block;">5,000 pt パック</strong>
+                <span style="font-size:0.75rem; color:var(--text-muted);">徒歩・自転車送迎 約25回分</span>
+              </div>
+            </div>
+            <strong style="font-size:1.1rem; color:var(--text-main);">¥5,000</strong>
+          </label>
+        </div>
+
+        <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.45; background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0; margin-bottom:16px;">
+          <strong>【資金決済法・道路運送法に関する重要事項】</strong><br>
+          ・購入された相互扶助ポイントは、地域コミュニティ内での送迎依頼における消費専用です。<br>
+          ・換金・出金・払い戻しはできません（points.cash_convertible = false）。<br>
+          ・購入日より送迎の依頼時消費にご利用いただけます。
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; padding:12px; font-size:0.95rem; font-weight:700;" onclick="window.executePointPurchase()">
+          クレジットカード等で購入・チャージする
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = document.getElementById('point-charge-modal');
+  const content = modal.querySelector('div');
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    content.style.transform = 'scale(1)';
+  }, 10);
+};
+
+window.executePointPurchase = function() {
+  const selectedRadio = document.querySelector('input[name="charge_pack"]:checked');
+  const amount = selectedRadio ? parseInt(selectedRadio.value, 10) : 1000;
+
+  try {
+    const result = purchasePoints({ userId: 'current_user', amountJPY: amount });
+    state.userPoints += result.amount_points;
+    state.pointTransactions.push({
+      id: 'tx_purchase_' + Date.now(),
+      timestamp: new Date().toLocaleString(),
+      type: PointsTransactionType.PURCHASE,
+      amount: result.amount_points,
+      description: `相互扶助ポイント購入 (${amount.toLocaleString()}円)`
+    });
+
+    const modal = document.getElementById('point-charge-modal');
+    if (modal) modal.remove();
+
+    render();
+
+    showCustomAlert(
+      'チャージ完了',
+      `【${result.amount_points.toLocaleString()} pt】のチャージが完了しました！（現在の保有残高: ${state.userPoints.toLocaleString()} pt）\n送迎依頼の消費にご利用いただけます。`
+    );
+  } catch (err) {
+    showCustomAlert('エラー', err.message || 'ポイント購入中にエラーが発生しました。');
+  }
+};
+
+window.showRedeemCarBikeModal = function() {
+  const capJPY = state.driverCarActualCostEligible;
+  const existingModal = document.getElementById('car-redeem-modal');
+  if (existingModal) existingModal.remove();
+
+  const modalHtml = `
+    <div id="car-redeem-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; transition: opacity 0.25s ease;">
+      <div style="background: white; width: 92%; max-width: 400px; padding: 24px; border-radius: 16px; box-shadow: var(--shadow-xl); transform: scale(0.9); transition: transform 0.25s ease;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="margin: 0; color: var(--text-main); font-size: 1.15rem; font-weight: 700;">
+            <i class="ph-fill ph-car" style="color:var(--primary);"></i> 車送迎 ガソリン実費精算申請
+          </h3>
+          <button onclick="document.getElementById('car-redeem-modal').remove()" style="background:none; border:none; font-size:1.4rem; color:var(--text-muted); cursor:pointer;">×</button>
+        </div>
+
+        <div style="background:#fffaf0; border:1px solid #fed7aa; border-radius:8px; padding:12px; margin-bottom:16px;">
+          <div style="font-size:0.8rem; color:var(--text-muted);">対象送迎の実費相当額上限 (capJPY)</div>
+          <div style="font-size:1.6rem; font-weight:700; color:var(--primary);">¥${capJPY.toLocaleString()}</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">※走行距離 × 20円/kmの実費計算に基づく法的上限額</div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label style="font-size:0.85rem; font-weight:700;">精算・出金希望金額 (円)</label>
+          <input type="number" id="redeem-amount-input" class="form-control" value="${capJPY}" placeholder="例: ${capJPY}">
+        </div>
+
+        <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.45; background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0; margin-bottom:16px;">
+          <strong>【道路運送法（有償運送回避）の厳格な検証】</strong><br>
+          実費相当額（¥${capJPY.toLocaleString()}）を超える換金申請は、有償旅客運送（白タク）規制に抵触する恐れがあるため、システムによって1円単位で自動拒絶されます。
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; padding:12px; font-weight:700;" onclick="window.executeCarRedeem()">
+          実費精算（振込口座へ送金）を申請する
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = document.getElementById('car-redeem-modal');
+  const content = modal.querySelector('div');
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    content.style.transform = 'scale(1)';
+  }, 10);
+};
+
+window.executeCarRedeem = function() {
+  const inputEl = document.getElementById('redeem-amount-input');
+  const amount = inputEl ? parseInt(inputEl.value, 10) : 0;
+
+  try {
+    const result = validateAndRedeemCarBikePoints({
+      transporterId: 'driver_user',
+      redemptionAmountJPY: amount,
+      rides: state.driverCompletedRides
+    });
+
+    state.driverCarActualCostEligible -= result.redemptionAmountJPY;
+
+    const modal = document.getElementById('car-redeem-modal');
+    if (modal) modal.remove();
+
+    render();
+
+    showCustomAlert(
+      '実費精算 承認完了',
+      `実費精算申請（¥${result.redemptionAmountJPY.toLocaleString()}）が法令上限内（¥${result.capJPY.toLocaleString()}以下）であることを確認・承認しました。\n登録口座（${state.driverBankAccount.bankName}）への送金手続きを実行します。`
+    );
+  } catch (err) {
+    showCustomAlert('精算申請エラー (法令上限超過)', err.message);
+  }
+};
+
+window.tryRedeemWalkCyclePoints = function() {
+  try {
+    redeemWalkCyclePointsForCash();
+  } catch (err) {
+    showCustomAlert(
+      '換金不可（非金銭の相互扶助ポイント）',
+      err.message + '\n\n※このポイントは、ご自身が他の送迎者に送迎を依頼する際に消費ポイントとしてご利用いただけます。'
+    );
+  }
 };
 
 // Init
