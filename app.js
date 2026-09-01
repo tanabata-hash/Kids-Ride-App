@@ -2356,10 +2356,10 @@ function FacilityAdminView() {
           </div>
 
           <div style="display:flex; gap:8px;">
-            <button class="btn btn-primary" style="flex:2; padding:8px 10px; font-size:0.8rem; font-weight:700;" onclick="showCustomAlert('引き渡し確認', '山田 太郎 くんの引き渡しを確認・記録しました！\n保護者へ引き渡し完了通知を送信しました。')">
-              <i class="ph-fill ph-check"></i> 顔写真を確認して引き渡し完了
+            <button class="btn btn-primary" style="flex:2; padding:8px 10px; font-size:0.82rem; font-weight:700; white-space:nowrap;" onclick="showCustomAlert('引き渡し確認', '山田 太郎 くんの引き渡しを確認・記録しました！\n保護者へ引き渡し完了通知を送信しました。')">
+              <i class="ph-fill ph-check"></i> 顔写真を確認
             </button>
-            <button class="btn btn-outline" style="flex:1; padding:8px 10px; font-size:0.8rem;" onclick="showCustomAlert('位置情報', '高橋様の現在地: 連雀通り 三鷹台方面より移動中（GPS正常受信中）')">
+            <button class="btn btn-outline" style="flex:1; padding:8px 10px; font-size:0.82rem; white-space:nowrap;" onclick="showCustomAlert('位置情報', '高橋様の現在地: 連雀通り 三鷹台方面より移動中（GPS正常受信中）')">
               現在地確認
             </button>
           </div>
