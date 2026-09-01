@@ -2158,6 +2158,24 @@ function ActiveRideView() {
         <button class="btn btn-outline" style="width:auto; padding:8px; border-radius:50%;" onclick="showCustomAlert('通話機能', '送迎パートナーへ発信します（デモ用）')"><i class="ph ph-phone"></i></button>
       </div>
 
+      <!-- カレンダー同期カード -->
+      <div class="card" style="margin-bottom:16px; background:#f8fafc; border:1px solid #e2e8f0; padding:14px 16px; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:0.85rem; font-weight:700; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-calendar-plus" style="color:var(--primary); font-size:1.15rem;"></i> 送迎予定をカレンダーに同期
+          </span>
+          <span style="font-size:0.7rem; color:var(--secondary); font-weight:600; background:#def7ec; padding:2px 8px; border-radius:10px;">ワンタップ追加</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" style="flex:1; background:#4285F4; color:white; font-size:0.8rem; padding:9px 10px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(66,133,244,0.3);" onclick="window.addToGoogleCalendar()">
+            <i class="ph-fill ph-google-logo"></i> Google カレンダー
+          </button>
+          <button class="btn" style="flex:1; background:#000000; color:white; font-size:0.8rem; padding:9px 10px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(0,0,0,0.3);" onclick="window.addToAppleCalendar()">
+            <i class="ph-fill ph-apple-logo"></i> iPhone カレンダー
+          </button>
+        </div>
+      </div>
+
 
 
       <!-- Chat UI -->
@@ -2886,6 +2904,86 @@ window.tryRedeemWalkCyclePoints = function() {
       err.message + '\n\n※このポイントは、ご自身が他の送迎者に送迎を依頼する際に消費ポイントとしてご利用いただけます。'
     );
   }
+};
+
+// ============================================================================
+// Google / iPhone カレンダー予定同期ロジック
+// ============================================================================
+
+function getRideCalendarDetails() {
+  const selectedDriverName = state.requestForm.selectedDriver === 'おまかせ（自動マッチング）' ? '佐藤 カズヤ' : state.requestForm.selectedDriver;
+  const driverInfo = driversList.find(d => d.name === selectedDriverName) || driversList[1];
+  const kindergarten = state.requestForm.kindergarten || '三鷹市立大沢保育園';
+  const destination = state.requestForm.location || 'ご自宅';
+  const specificTime = state.requestForm.specificTime || '17:00';
+  
+  // 日付の決定 (2026年8月)
+  let dayNum = state.requestForm.onceDate || 20;
+  if (state.requestForm.frequency === 'monthly' && state.requestForm.monthlyDays.length > 0) {
+    dayNum = state.requestForm.monthlyDays[0];
+  }
+  const dayStr = String(dayNum).padStart(2, '0');
+  const yearMonth = '202608';
+  
+  // 開始・終了時刻 (30分枠)
+  const [hours, minutes] = specificTime.split(':').map(Number);
+  const startHourStr = String(hours).padStart(2, '0');
+  const startMinStr = String(minutes).padStart(2, '0');
+  
+  const endHours = minutes + 30 >= 60 ? hours + 1 : hours;
+  const endMinutes = (minutes + 30) % 60;
+  const endHourStr = String(endHours).padStart(2, '0');
+  const endMinStr = String(endMinutes).padStart(2, '0');
+  
+  const dtStart = `${yearMonth}${dayStr}T${startHourStr}${startMinStr}00`;
+  const dtEnd = `${yearMonth}${dayStr}T${endHourStr}${endMinStr}00`;
+  
+  const title = `【KidsRide】${kindergarten} お迎え (${driverInfo.name})`;
+  const location = `${kindergarten} → ${destination}`;
+  const details = `■ KidsRide 子ども送迎予定\n・担当送迎者: ${driverInfo.name} (${driverInfo.method})\n・お迎え先: ${kindergarten}\n・お届け先: ${destination}\n・予定時刻: ${specificTime}〜\n・現在地追跡: KidsRideアプリでリアルタイムGPS追跡が可能です。`;
+  
+  return { title, location, details, dtStart, dtEnd, dayNum, specificTime, driverName: driverInfo.name };
+}
+
+window.addToGoogleCalendar = function() {
+  const { title, location, details, dtStart, dtEnd } = getRideCalendarDetails();
+  
+  // Googleカレンダー 登録URL
+  const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${dtStart}/${dtEnd}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(location)}`;
+  
+  window.open(googleCalendarUrl, '_blank');
+};
+
+window.addToAppleCalendar = function() {
+  const { title, location, details, dtStart, dtEnd } = getRideCalendarDetails();
+  
+  // iCalendar (.ics) 形式テキストの生成
+  const icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//KidsRide//KidsRide App//JA',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `SUMMARY:${title}`,
+    `DESCRIPTION:${details.replace(/\n/g, '\\n')}`,
+    `LOCATION:${location}`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `STATUS:CONFIRMED`,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+  
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.setAttribute('download', 'kidsride_schedule.ics');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  showCustomAlert('iPhoneカレンダー連携', '送迎予定のiCalendar (.ics) ファイルを生成しました！\nダウンロードを開いてカレンダーに追加してください。');
 };
 
 // Init
