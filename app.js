@@ -2345,13 +2345,19 @@ function FacilityAdminView() {
             </span>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 10px; border-radius:6px; margin-bottom:10px; border:1px solid #f1f5f9;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=kenta" alt="Driver" class="avatar" style="width:36px; height:36px; border:1px solid #cbd5e1;">
-              <div>
-                <span style="font-size:0.85rem; font-weight:700; color:var(--text-main);">送迎者: 高橋 ケンタ 様</span>
-                <span style="font-size:0.72rem; color:var(--text-muted); display:block;"><i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 同一施設保護者 (認証済) / <i class="ph-fill ph-car"></i> 車送迎</span>
-              </div>
+          <!-- 送迎者情報ブロック (バッジ構造化で重なり完全防止) -->
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; margin-bottom:10px; border:1px solid #f1f5f9;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=kenta" alt="Driver" class="avatar" style="width:34px; height:34px; border:1px solid #cbd5e1;">
+              <span style="font-size:0.88rem; font-weight:700; color:var(--text-main);">送迎者: 高橋 ケンタ 様</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; font-size:0.72rem; padding-left:44px;">
+              <span style="background:#def7ec; color:#03543f; padding:2px 8px; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                <i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 同一施設保護者（認証済）
+              </span>
+              <span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                <i class="ph-fill ph-car"></i> 車送迎
+              </span>
             </div>
           </div>
 
@@ -2377,18 +2383,24 @@ function FacilityAdminView() {
             </span>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 10px; border-radius:6px; margin-bottom:10px; border:1px solid #f1f5f9;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user" alt="Driver" class="avatar" style="width:36px; height:36px; border:1px solid #cbd5e1;">
-              <div>
-                <span style="font-size:0.85rem; font-weight:700; color:var(--text-main);">送迎者: 佐藤 カズヤ 様</span>
-                <span style="font-size:0.72rem; color:var(--text-muted); display:block;"><i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 同一施設保護者 (認証済) / <i class="ph-fill ph-bicycle"></i> 自転車送迎</span>
-              </div>
+          <!-- 送迎者情報ブロック -->
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; margin-bottom:10px; border:1px solid #f1f5f9;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+              <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user" alt="Driver" class="avatar" style="width:34px; height:34px; border:1px solid #cbd5e1;">
+              <span style="font-size:0.88rem; font-weight:700; color:var(--text-main);">送迎者: 佐藤 カズヤ 様</span>
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; font-size:0.72rem; padding-left:44px;">
+              <span style="background:#def7ec; color:#03543f; padding:2px 8px; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                <i class="ph-fill ph-check-circle" style="color:#22c55e;"></i> 同一施設保護者（認証済）
+              </span>
+              <span style="background:#f3e8ff; color:#6b21a8; padding:2px 8px; border-radius:4px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                <i class="ph-fill ph-bicycle"></i> 自転車送迎
+              </span>
             </div>
           </div>
 
           <div style="display:flex; gap:8px;">
-            <button class="btn btn-outline" style="flex:1; padding:8px 10px; font-size:0.8rem; border-color:#cbd5e1; color:#64748b;" onclick="showCustomAlert('引き渡し準備', '17:30の予定です。送迎者が園に近づき次第、自動で接近アラートが表示されます。')">
+            <button class="btn btn-outline" style="flex:1; padding:8px 10px; font-size:0.82rem; border-color:#cbd5e1; color:#64748b;" onclick="showCustomAlert('引き渡し準備', '17:30の予定です。送迎者が園に近づき次第、自動で接近アラートが表示されます。')">
               引き渡し準備中
             </button>
           </div>
@@ -2396,7 +2408,7 @@ function FacilityAdminView() {
 
         <!-- リスト行 3 (引き渡し完了) -->
         <div style="padding:14px; border-left:4px solid #22c55e; background:#fafffa; opacity:0.9;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size:0.72rem; background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-weight:700;">らいおん組 (6歳児)</span>
               <strong style="font-size:1rem; color:var(--text-main);">佐藤 健太 くん</strong>
@@ -2406,8 +2418,8 @@ function FacilityAdminView() {
             </span>
           </div>
 
-          <div style="font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center;">
-            <span>送迎者: 渡辺 ユウキ 様（徒歩送迎）</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted); background:white; padding:8px 12px; border-radius:6px; border:1px solid #e2e8f0;">
+            <span>送迎者: <strong>渡辺 ユウキ 様</strong>（徒歩送迎）</span>
             <span style="color:#64748b;">担当保育士: 田中</span>
           </div>
         </div>
