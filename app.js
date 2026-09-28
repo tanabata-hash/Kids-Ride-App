@@ -1,6 +1,6 @@
 // システム設定 (System Configuration & Production Switch)
 const CONFIG = {
-  IS_DEMO: true, // true: デモ・審査・実証実験モード (現在表示中), false: 本番実稼働モード (一瞬で切り替え可能)
+  IS_DEMO: false, // 本番実稼働モード（デモプロトタイプ表示を完全にオフ）
   STRIPE_PUBLIC_KEY: 'pk_live_kidsride_production_key_sample',
   FIREBASE_ENABLED: true,
   APP_VERSION: '1.0.0-prod-ready',
