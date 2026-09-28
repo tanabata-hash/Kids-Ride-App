@@ -338,6 +338,19 @@ const state = {
     assignedDays: [11]
   },
   // 管理者ポータル管理状態
+  isAdminAuthenticated: !!localStorage.getItem('kidsride_admin_token'),
+  currentAdmin: JSON.parse(localStorage.getItem('kidsride_admin_user') || 'null'),
+  adminAuthTab: 'login', // 'login' | 'register'
+  adminAccounts: JSON.parse(localStorage.getItem('kidsride_admin_accounts') || 'null') || [
+    {
+      adminId: 'admin',
+      password: 'kidsride2026',
+      name: 'KidsRide 統括管理責任者',
+      email: 'hq-admin@kidsride.jp',
+      role: '統括管理者 (Super Admin)',
+      createdAt: '2026-01-01 09:00'
+    }
+  ],
   adminTab: 'ranking', // 'ranking' | 'users' | 'vehicles' | 'compliance'
   adminUserFilter: 'all', // 'all' | 'driver' | 'parent' | 'both' | 'pending'
   adminUserSearch: '',
@@ -801,9 +814,10 @@ window.transitionMarker = function(marker, startLatLng, endLatLng, duration = 20
 };
 
 // Router
-const ADMIN_ROUTES = ['admin', 'facility-admin', 'driver-dashboard'];
+const ADMIN_ROUTES = ['facility-admin', 'driver-dashboard'];
 
 function navigate(route) {
+  // admin は管理者ポータル独自の認証システム（ID/PWログイン・登録）を持つため独立
   if (ADMIN_ROUTES.includes(route) && !state.isAuthenticated) {
     window.showCustomAlert('ログインが必要です', 'このページはログイン後にご利用いただけます。');
     return;
@@ -993,6 +1007,8 @@ function renderHeader(title) {
 }
 
 function renderBottomNav() {
+  if (state.currentRoute === 'admin') return '';
+
   const routes = [
     { id: 'dashboard', icon: 'ph-house', label: 'ホーム' },
     { id: 'request', icon: 'ph-calendar-plus', label: '依頼する' },
@@ -1131,9 +1147,6 @@ function AuthLoginView() {
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">はじめての方はこちら</p>
         <a href="#" onclick="navigate('register')" style="color:var(--primary); font-size:1rem; font-weight:700;">利用者登録ページへ進む</a>
         <div style="margin-top:24px; display:flex; flex-direction:column; gap:8px;">
-          <a href="#" onclick="navigate('admin')" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#1e293b; padding:10px; border-radius:8px; font-size:0.85rem; font-weight:700; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <i class="ph-fill ph-shield-check" style="color:var(--primary); font-size:1.1rem;"></i> 管理者用 統括ポータル（ランキング・全登録者台帳・運行監査）
-          </a>
           <a href="#" onclick="navigate('facility-admin')" style="color:var(--text-muted); font-size:0.8rem; text-decoration:underline;">【提携施設用】送迎・引き渡しモニタリング画面へ</a>
         </div>
       </div>
@@ -1351,19 +1364,6 @@ function ProfileView() {
         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="navigate('driver-verify')">
           <span style="font-weight:600;"><i class="ph ph-identification-card" style="margin-right:8px;"></i>審査書類（運転免許証・車検証・在園確認等）</span>
           <i class="ph ph-caret-right" style="color:var(--text-muted)"></i>
-        </div>
-      </div>
-
-      <h3 style="margin-top:24px; font-size:1.1rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
-        <i class="ph-fill ph-gear" style="color:#64748b;"></i> システム管理者メニュー
-      </h3>
-      <div class="card" style="margin-bottom:24px; padding: 12px 16px; background:#f8fafc; border:1px solid #cbd5e1;">
-        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="navigate('admin')">
-          <div>
-            <strong style="color:var(--primary); font-size:0.95rem; display:block;"><i class="ph-fill ph-shield-check" style="margin-right:6px;"></i>KidsRide 統括管理ポータル</strong>
-            <span style="font-size:0.75rem; color:var(--text-muted);">稼働率・評価ランキング／全登録者台帳／車両・運行日報監査</span>
-          </div>
-          <i class="ph ph-caret-right" style="color:var(--primary); font-size:1.1rem;"></i>
         </div>
       </div>
     </main>
@@ -2632,6 +2632,97 @@ window.exportTransportRecordsCSV = function() {
   link.click();
 };
 
+// 管理者ポータル：認証タブ切り替え（ログイン / 新規登録）
+window.setAdminAuthTab = function(tab) {
+  state.adminAuthTab = tab;
+  render();
+};
+
+// 管理者ポータル：専用ログイン処理
+window.handleAdminLogin = function(event) {
+  if (event) event.preventDefault();
+  const idInput = document.getElementById('admin-login-id');
+  const passInput = document.getElementById('admin-login-password');
+  const adminId = (idInput ? idInput.value : '').trim();
+  const password = (passInput ? passInput.value : '').trim();
+
+  if (!adminId || !password) {
+    window.showCustomAlert('入力エラー', '管理者IDとパスワードを入力してください。');
+    return;
+  }
+
+  const account = (state.adminAccounts || []).find(a => (a.adminId.toLowerCase() === adminId.toLowerCase() || a.email.toLowerCase() === adminId.toLowerCase()) && a.password === password);
+  if (account) {
+    state.isAdminAuthenticated = true;
+    state.currentAdmin = account;
+    localStorage.setItem('kidsride_admin_token', 'true');
+    localStorage.setItem('kidsride_admin_user', JSON.stringify(account));
+    window.showCustomAlert('管理者認証成功', `KidsRide 統括管理ポータルへようこそ、${account.name} 様。`);
+    render();
+  } else {
+    window.showCustomAlert('認証エラー', '管理者IDまたはパスワードが一致しません。\n（※初期デモ管理者ID: admin / パスワード: kidsride2026）');
+  }
+};
+
+// 管理者ポータル：専用アカウント新規登録処理
+window.handleAdminRegister = function(event) {
+  if (event) event.preventDefault();
+  const name = (document.getElementById('admin-reg-name')?.value || '').trim();
+  const adminId = (document.getElementById('admin-reg-id')?.value || '').trim();
+  const email = (document.getElementById('admin-reg-email')?.value || '').trim();
+  const password = (document.getElementById('admin-reg-password')?.value || '').trim();
+  const secretKey = (document.getElementById('admin-reg-key')?.value || '').trim();
+
+  if (!name || !adminId || !email || !password || !secretKey) {
+    window.showCustomAlert('入力エラー', 'すべての項目を入力してください。');
+    return;
+  }
+
+  // 招待認証キーのチェック（セキュリティコード）
+  if (secretKey !== 'KIDSRIDE-HQ-2026' && secretKey !== 'kidsride2026') {
+    window.showCustomAlert('登録承認エラー', '管理者招待キー（セキュリティコード）が正しくありません。\n統括本部発行の正規コード（例: KIDSRIDE-HQ-2026）を入力してください。');
+    return;
+  }
+
+  // 既存IDの重複チェック
+  const exists = (state.adminAccounts || []).some(a => a.adminId.toLowerCase() === adminId.toLowerCase());
+  if (exists) {
+    window.showCustomAlert('登録エラー', '指定された管理者IDは既に使用されています。別のIDを指定してください。');
+    return;
+  }
+
+  const newAdmin = {
+    adminId: adminId,
+    password: password,
+    name: name,
+    email: email,
+    role: '運行統括管理者',
+    createdAt: new Date().toLocaleString('ja-JP')
+  };
+
+  state.adminAccounts.push(newAdmin);
+  localStorage.setItem('kidsride_admin_accounts', JSON.stringify(state.adminAccounts));
+
+  // 自動ログイン
+  state.isAdminAuthenticated = true;
+  state.currentAdmin = newAdmin;
+  localStorage.setItem('kidsride_admin_token', 'true');
+  localStorage.setItem('kidsride_admin_user', JSON.stringify(newAdmin));
+
+  window.showCustomAlert('管理者登録完了', `管理者アカウント（${adminId}）を新規発行・登録しました！\n統括管理ポータルにログインしました。`);
+  render();
+};
+
+// 管理者ポータル：ログアウト処理
+window.handleAdminLogout = function() {
+  state.isAdminAuthenticated = false;
+  state.currentAdmin = null;
+  localStorage.removeItem('kidsride_admin_token');
+  localStorage.removeItem('kidsride_admin_user');
+  window.showCustomAlert('ログアウト完了', '管理者ポータルから安全にログアウトしました。');
+  render();
+};
+
 // 管理者ポータル：タブ切り替え
 window.setAdminTab = function(tabName) {
   state.adminTab = tabName;
@@ -2968,7 +3059,125 @@ window.showTransportRecordModal = function(recordId) {
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
+function AdminAuthView() {
+  const currentTab = state.adminAuthTab || 'login';
+
+  return `
+    <header style="background:#0f172a; color:white; padding:16px 20px; display:flex; align-items:center; justify-content:space-between; box-shadow:var(--shadow-md);">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="background:linear-gradient(135deg, #0284c7, #2563eb); color:white; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.2rem;">
+          <i class="ph-fill ph-shield-check"></i>
+        </span>
+        <div>
+          <span style="font-weight:800; font-size:1.05rem; letter-spacing:0.02em; display:block; line-height:1.2;">KidsRide 統括管理ポータル</span>
+          <span style="font-size:0.68rem; color:#94a3b8; letter-spacing:0.05em;">SECURE ADMIN GATEWAY</span>
+        </div>
+      </div>
+      <a href="#" onclick="navigate('dashboard')" style="color:#94a3b8; font-size:0.78rem; text-decoration:none; display:flex; align-items:center; gap:4px; padding:6px 12px; background:rgba(255,255,255,0.08); border-radius:6px;">
+        <i class="ph ph-arrow-left"></i> 一般サイトへ戻る
+      </a>
+    </header>
+
+    <main class="fade-in" style="max-width:440px; margin:28px auto 60px auto; padding:0 16px;">
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="display:inline-flex; align-items:center; justify-content:center; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #1e3a8a, #0284c7); color:white; font-size:2rem; box-shadow:0 8px 16px rgba(2, 132, 199, 0.25); margin-bottom:12px;">
+          <i class="ph-fill ph-lock-key"></i>
+        </div>
+        <h2 style="font-size:1.3rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">管理者ポータル 認証ゲートウェイ</h2>
+        <p style="font-size:0.78rem; color:#64748b; margin:0; line-height:1.4;">
+          ※本ポータルは運営事務局・統括管理関係者専用です。<br>一般サイト上には公開されていません。
+        </p>
+      </div>
+
+      <!-- 認証タブ切替（管理者ログイン / 管理者ID新規登録） -->
+      <div style="display:flex; background:#e2e8f0; border-radius:10px; padding:4px; margin-bottom:20px;">
+        <button type="button" onclick="setAdminAuthTab('login')" style="flex:1; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; background:${currentTab === 'login' ? 'white' : 'transparent'}; color:${currentTab === 'login' ? 'var(--primary)' : '#64748b'}; box-shadow:${currentTab === 'login' ? 'var(--shadow-sm)' : 'none'}; transition:all 0.2s;">
+          <i class="ph-bold ph-sign-in"></i> 管理者ログイン
+        </button>
+        <button type="button" onclick="setAdminAuthTab('register')" style="flex:1; border:none; padding:10px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; background:${currentTab === 'register' ? 'white' : 'transparent'}; color:${currentTab === 'register' ? 'var(--primary)' : '#64748b'}; box-shadow:${currentTab === 'register' ? 'var(--shadow-sm)' : 'none'}; transition:all 0.2s;">
+          <i class="ph-bold ph-user-plus"></i> 管理者ID新規登録
+        </button>
+      </div>
+
+      ${currentTab === 'login' ? `
+        <!-- 管理者ログインフォーム -->
+        <div class="card" style="padding:24px; box-shadow:var(--shadow-md); border:1px solid #cbd5e1;">
+          <form onsubmit="handleAdminLogin(event)">
+            <div class="form-group" style="margin-bottom:16px;">
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px; display:block;">管理者ログインID / メール</label>
+              <div style="position:relative;">
+                <i class="ph ph-user" style="position:absolute; left:12px; top:12px; color:#94a3b8; font-size:1.1rem;"></i>
+                <input type="text" id="admin-login-id" class="form-control" placeholder="例: admin" value="admin" style="padding-left:38px;" required>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:20px;">
+              <label style="font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px; display:block;">管理者パスワード</label>
+              <div style="position:relative;">
+                <i class="ph ph-lock" style="position:absolute; left:12px; top:12px; color:#94a3b8; font-size:1.1rem;"></i>
+                <input type="password" id="admin-login-password" class="form-control" placeholder="パスワードを入力" value="kidsride2026" style="padding-left:38px;" required>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-size:0.95rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <i class="ph-bold ph-shield-check"></i> 管理者ポータルへログイン
+            </button>
+          </form>
+
+          <div style="margin-top:20px; padding:12px; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1; font-size:0.75rem; color:#64748b;">
+            <strong style="color:#0f172a; display:block; margin-bottom:4px;"><i class="ph-fill ph-info"></i> デモ環境 初期管理者アカウント:</strong>
+            <div>・管理者ID: <code style="background:#e2e8f0; padding:2px 4px; border-radius:4px; font-weight:700;">admin</code></div>
+            <div>・パスワード: <code style="background:#e2e8f0; padding:2px 4px; border-radius:4px; font-weight:700;">kidsride2026</code></div>
+          </div>
+        </div>
+      ` : `
+        <!-- 管理者新規アカウント登録フォーム -->
+        <div class="card" style="padding:24px; box-shadow:var(--shadow-md); border:1px solid #cbd5e1;">
+          <form onsubmit="handleAdminRegister(event)">
+            <div class="form-group" style="margin-bottom:14px;">
+              <label style="font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:4px; display:block;">管理者 氏名 <span style="color:var(--danger); font-size:0.75rem;">*必須</span></label>
+              <input type="text" id="admin-reg-name" class="form-control" placeholder="例: 統括主任 山田 健一" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom:14px;">
+              <label style="font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:4px; display:block;">希望管理者ログインID（半角英数） <span style="color:var(--danger); font-size:0.75rem;">*必須</span></label>
+              <input type="text" id="admin-reg-id" class="form-control" placeholder="例: yamada_admin" pattern="^[a-zA-Z0-9_-]{3,20}$" title="半角英数字3〜20文字" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom:14px;">
+              <label style="font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:4px; display:block;">業務連絡用メールアドレス <span style="color:var(--danger); font-size:0.75rem;">*必須</span></label>
+              <input type="email" id="admin-reg-email" class="form-control" placeholder="例: yamada@kidsride.jp" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom:14px;">
+              <label style="font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:4px; display:block;">管理者パスワード（6文字以上） <span style="color:var(--danger); font-size:0.75rem;">*必須</span></label>
+              <input type="password" id="admin-reg-password" class="form-control" placeholder="半角英数6文字以上" minlength="6" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom:20px;">
+              <label style="font-size:0.82rem; font-weight:700; color:#334155; margin-bottom:4px; display:block;">
+                管理者招待キー（セキュリティコード） <span style="color:var(--danger); font-size:0.75rem;">*必須</span>
+              </label>
+              <input type="text" id="admin-reg-key" class="form-control" placeholder="KIDSRIDE-HQ-2026" value="KIDSRIDE-HQ-2026" required>
+              <span style="font-size:0.72rem; color:#64748b; margin-top:2px; display:block;">※不正登録防止用の本部承認キーです（初期値: KIDSRIDE-HQ-2026）</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width:100%; padding:12px; font-size:0.95rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <i class="ph-bold ph-user-plus"></i> 管理者アカウントを発行・登録
+            </button>
+          </form>
+        </div>
+      `}
+    </main>
+  `;
+}
+
 function AdminView() {
+  // 管理者専用認証チェック（未認証時は管理者ログイン・新規登録画面を表示）
+  if (!state.isAdminAuthenticated) {
+    return AdminAuthView();
+  }
+
   const currentTab = state.adminTab || 'ranking';
   const filter = state.adminUserFilter || 'all';
   const search = state.adminUserSearch || '';
@@ -3323,14 +3532,26 @@ function AdminView() {
     <main class="fade-in" style="padding-top:16px; padding-bottom:80px;">
       <!-- プラットフォーム全体 KPI サマリーヘッダー -->
       <div class="card" style="background:linear-gradient(135deg, #1e3a8a, #0284c7); color:white; margin-bottom:16px; padding:16px; box-shadow:var(--shadow-md);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
           <div>
-            <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px; font-weight:600;">Executive Management Portal</span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px; font-weight:600;">Executive Management Portal</span>
+              <span style="font-size:0.7rem; background:#10b981; color:white; padding:2px 8px; border-radius:10px; font-weight:700;">認証中</span>
+            </div>
             <h2 style="color:white; font-size:1.25rem; margin:4px 0 0 0; font-weight:800;">KidsRide 運行統括・監査ダッシュボード</h2>
+            <div style="font-size:0.74rem; color:#bae6fd; margin-top:3px; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-user-circle"></i>
+              <span>担当管理者: <strong>${state.currentAdmin ? state.currentAdmin.name : '統括管理者'}</strong> <span style="opacity:0.85;">(${state.currentAdmin ? state.currentAdmin.role || state.currentAdmin.adminId : 'Super Admin'})</span></span>
+            </div>
           </div>
-          <button class="btn btn-outline" onclick="navigate('dashboard')" style="background:rgba(255,255,255,0.15); color:white; border-color:white; padding:4px 12px; font-size:0.75rem; width:auto;">
-            通常画面へ
-          </button>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn btn-outline" onclick="handleAdminLogout()" style="background:rgba(239,68,68,0.25); color:#fee2e2; border-color:rgba(254,202,202,0.4); padding:5px 12px; font-size:0.75rem; width:auto; display:flex; align-items:center; gap:4px;">
+              <i class="ph ph-sign-out"></i> 管理者ログアウト
+            </button>
+            <button class="btn btn-outline" onclick="navigate('dashboard')" style="background:rgba(255,255,255,0.15); color:white; border-color:white; padding:5px 12px; font-size:0.75rem; width:auto;">
+              一般画面へ
+            </button>
+          </div>
         </div>
 
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; text-align:center;">
@@ -4337,7 +4558,33 @@ window.addToAppleCalendar = function() {
   showCustomAlert('iPhoneカレンダー連携', '送迎予定のiCalendar (.ics) ファイルを生成しました！\nダウンロードを開いてカレンダーに追加してください。');
 };
 
+// 管理者ポータル用 URL判定（サイト上には明記せず、共有URL・ハッシュからのみアクセス可能）
+function checkAdminRouteFromUrl() {
+  const hash = (window.location.hash || '').toLowerCase();
+  const search = (window.location.search || '').toLowerCase();
+  if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal' || search.includes('view=admin') || search.includes('portal=admin')) {
+    state.currentRoute = 'admin';
+    return true;
+  }
+  return false;
+}
+
+// ハッシュ変更時にも即座に反応
+window.addEventListener('hashchange', () => {
+  if (checkAdminRouteFromUrl()) {
+    render();
+  }
+});
+
 // Init
 document.addEventListener('DOMContentLoaded', () => {
+  checkAdminRouteFromUrl();
   render();
 });
+
+// 既にDOM読込完了済みの環境への対応
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  if (checkAdminRouteFromUrl()) {
+    render();
+  }
+}
