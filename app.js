@@ -338,20 +338,46 @@ const state = {
     assignedDays: [11]
   },
   // 管理者ポータル管理状態
-  isAdminAuthenticated: !!localStorage.getItem('kidsride_admin_token'),
-  currentAdmin: JSON.parse(localStorage.getItem('kidsride_admin_user') || 'null'),
+  isAdminAuthenticated: (() => {
+    const user = JSON.parse(localStorage.getItem('kidsride_admin_user') || 'null');
+    if (user && user.adminId === 'admin') {
+      localStorage.removeItem('kidsride_admin_user');
+      localStorage.removeItem('kidsride_admin_token');
+      return false;
+    }
+    return !!localStorage.getItem('kidsride_admin_token');
+  })(),
+  currentAdmin: (() => {
+    const user = JSON.parse(localStorage.getItem('kidsride_admin_user') || 'null');
+    if (user && user.adminId === 'admin') {
+      return null;
+    }
+    return user;
+  })(),
   pendingAdminLogin: null, // 2FA認証コード待ちの一時保持用
   adminAuthTab: 'login', // 'login' | 'register'
-  adminAccounts: JSON.parse(localStorage.getItem('kidsride_admin_accounts') || 'null') || [
-    {
-      adminId: 'admin',
-      password: 'kidsride2026',
-      name: 'KidsRide 統括管理責任者',
-      email: 'hq-admin@kidsride.jp',
-      role: '統括管理者 (Super Admin)',
-      createdAt: '2026-01-01 09:00'
+  // 管理者アカウントリスト（初期adminを完全削除）
+  adminAccounts: (() => {
+    let saved = JSON.parse(localStorage.getItem('kidsride_admin_accounts') || 'null');
+    if (saved && Array.isArray(saved)) {
+      saved = saved.filter(a => a.adminId !== 'admin');
+    } else {
+      saved = [];
     }
-  ],
+    // tanabata_adminが未登録の場合はプレースホルダー登録
+    if (!saved.some(a => a.adminId === 'tanabata_admin')) {
+      saved.push({
+        adminId: 'tanabata_admin',
+        password: '', // ユーザーが登録画面で入力したパスワード
+        name: 'Tanabata 統括管理者',
+        email: 'tanabata@kidsride.jp',
+        role: '統括管理者 (Super Admin)',
+        createdAt: new Date().toLocaleString('ja-JP')
+      });
+    }
+    localStorage.setItem('kidsride_admin_accounts', JSON.stringify(saved));
+    return saved;
+  })(),
   adminTab: 'ranking', // 'ranking' | 'users' | 'vehicles' | 'compliance' | 'audit'
   adminUserFilter: 'all', // 'all' | 'driver' | 'parent' | 'both' | 'pending'
   adminUserSearch: '',
@@ -2890,7 +2916,7 @@ window.handleAdminLogin = function(event) {
     state.pendingAdminLogin = account;
     window.showAdmin2FAModal(account);
   } else {
-    window.showCustomAlert('認証エラー', '管理者IDまたはパスワードが一致しません。\n（※初期デモ管理者ID: admin / パスワード: kidsride2026）');
+    window.showCustomAlert('認証エラー', '管理者IDまたはパスワードが正しくありません。\n登録済みの管理者IDとパスワードをご確認ください。');
   }
 };
 
@@ -3409,7 +3435,7 @@ function AdminAuthView() {
               <label style="font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px; display:block;">管理者ログインID / メール</label>
               <div style="position:relative;">
                 <i class="ph ph-user" style="position:absolute; left:12px; top:12px; color:#94a3b8; font-size:1.1rem;"></i>
-                <input type="text" id="admin-login-id" class="form-control" placeholder="例: admin" value="admin" style="padding-left:38px;" required>
+                <input type="text" id="admin-login-id" class="form-control" placeholder="管理者ID (例: tanabata_admin)" style="padding-left:38px;" required>
               </div>
             </div>
 
@@ -3417,7 +3443,7 @@ function AdminAuthView() {
               <label style="font-size:0.85rem; font-weight:700; color:#334155; margin-bottom:6px; display:block;">管理者パスワード</label>
               <div style="position:relative;">
                 <i class="ph ph-lock" style="position:absolute; left:12px; top:12px; color:#94a3b8; font-size:1.1rem;"></i>
-                <input type="password" id="admin-login-password" class="form-control" placeholder="パスワードを入力" value="kidsride2026" style="padding-left:38px;" required>
+                <input type="password" id="admin-login-password" class="form-control" placeholder="管理者パスワードを入力" style="padding-left:38px;" required>
               </div>
             </div>
 
@@ -3426,10 +3452,8 @@ function AdminAuthView() {
             </button>
           </form>
 
-          <div style="margin-top:20px; padding:12px; background:#f8fafc; border-radius:8px; border:1px dashed #cbd5e1; font-size:0.75rem; color:#64748b;">
-            <strong style="color:#0f172a; display:block; margin-bottom:4px;"><i class="ph-fill ph-info"></i> デモ環境 初期管理者アカウント:</strong>
-            <div>・管理者ID: <code style="background:#e2e8f0; padding:2px 4px; border-radius:4px; font-weight:700;">admin</code></div>
-            <div>・パスワード: <code style="background:#e2e8f0; padding:2px 4px; border-radius:4px; font-weight:700;">kidsride2026</code></div>
+          <div style="margin-top:16px; padding:10px 12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0; font-size:0.75rem; color:#64748b; text-align:center;">
+            <i class="ph-fill ph-shield-check" style="color:#0284c7;"></i> 2段階認証 (2FA) による多要素セキュリティ保護が有効です
           </div>
         </div>
       ` : `
