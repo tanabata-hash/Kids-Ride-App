@@ -1,6 +1,12 @@
+// URLパラメータによる即時プレビュー判定 (?mode=demo または ?demo=true でデモ表示、通常は本番モード)
+const _urlParams = new URLSearchParams(window.location.search);
+const _isDemoRequested = _urlParams.get('mode') === 'demo' || _urlParams.get('demo') === 'true';
+const _isProdRequested = _urlParams.get('mode') === 'prod' || _urlParams.get('prod') === 'true';
+
 // システム設定 (System Configuration & Production Switch)
 const CONFIG = {
-  IS_DEMO: false, // 本番実稼働モード（デモプロトタイプ表示を完全にオフ）
+  // デフォルト: false (本番モード)。URLに ?mode=demo を付けると審査用デモモードとして確認可能
+  IS_DEMO: _isDemoRequested ? true : (_isProdRequested ? false : false),
   STRIPE_PUBLIC_KEY: 'pk_live_kidsride_production_key_sample',
   FIREBASE_ENABLED: true,
   APP_VERSION: '1.0.0-prod-ready',
