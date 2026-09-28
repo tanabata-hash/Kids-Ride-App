@@ -189,6 +189,100 @@ const state = {
     { rideId: 'ride_demo_1', transportType: TransportType.CAR, actualCostAmount: 1200, date: '8/20' },
     { rideId: 'ride_demo_2', transportType: TransportType.CAR, actualCostAmount: 1200, date: '8/22' }
   ],
+  // 登録車両情報（車検証・任意保険・安全装備）
+  driverVehicle: {
+    model: 'トヨタ シエンタ ハイブリッド (6/7人乗り)',
+    plateNumber: '多摩 501 さ 38-25',
+    color: 'ホワイトパールクリスタルシャイン',
+    capacity: '7名（運転者含む）',
+    childSeatType: 'ISOFIX対応チャイルドシート 1台 + ジュニアシート 1台常設 (ECE R129安全基準適合)',
+    shakenExpiry: '2027年10月15日 (有効・車検適合済)',
+    compulsoryInsurance: '自賠責保険加入済 (損害保険ジャパン 2027/11満了)',
+    voluntaryInsurance: '東京海上日動火災保険 (証券番号: TKN-88392019)',
+    insuranceCoverage: '対人賠償: 無制限 / 対物賠償: 無制限 / 人身傷害: 5,000万円 (搭乗者特約付帯)',
+    dashcam: '前後2カメラ式 常時録画クラウド連携ドライブレコーダー搭載',
+    inspectionStatus: '定期点検適合 (直近: 2026年6月 12ヶ月定期点検済)',
+    isVerified: true
+  },
+  // 輸送記録（運行日報・走行ログ一覧：道路運送法および実費精算監査準拠）
+  transportRecords: [
+    {
+      recordId: 'TR-20260825-01',
+      date: '2026/08/25',
+      timeSlot: '08:10 - 08:32 (22分間)',
+      type: '朝便',
+      childName: '山田 太郎 くん (4歳・きりん組)',
+      parentName: '山田 花子 様',
+      departure: '三鷹市下連雀3丁目 ご自宅',
+      destination: '三鷹市立大沢保育園',
+      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
+      distanceKm: 3.2,
+      gasRate: 11, // 円/km
+      actualCost: 35, // 円 (実費のみ・利益0円)
+      status: '運行完了',
+      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
+      preInspection: '日常点検良好 (灯火類・ブレーキ・タイヤ)',
+      childSeatUsed: '適合チャイルドシート着用確認済',
+      gpsLogStatus: 'GPS全軌跡保管済 (2秒間隔測位)'
+    },
+    {
+      recordId: 'TR-20260822-02',
+      date: '2026/08/22',
+      timeSlot: '17:15 - 17:38 (23分間)',
+      type: '夕便',
+      childName: '鈴木 アリサ ちゃん (3歳・うさぎ組)',
+      parentName: '鈴木 一郎 様',
+      departure: '三鷹市立大沢保育園',
+      destination: '三鷹市野崎2丁目 ご自宅',
+      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
+      distanceKm: 2.8,
+      gasRate: 11,
+      actualCost: 30,
+      status: '運行完了',
+      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
+      preInspection: '日常点検良好',
+      childSeatUsed: '適合チャイルドシート着用確認済',
+      gpsLogStatus: 'GPS全軌跡保管済'
+    },
+    {
+      recordId: 'TR-20260820-01',
+      date: '2026/08/20',
+      timeSlot: '08:15 - 08:35 (20分間)',
+      type: '朝便',
+      childName: '山田 太郎 くん (4歳・きりん組)',
+      parentName: '山田 花子 様',
+      departure: '三鷹市下連雀3丁目 ご自宅',
+      destination: '三鷹市立大沢保育園',
+      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
+      distanceKm: 3.2,
+      gasRate: 11,
+      actualCost: 35,
+      status: '運行完了',
+      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
+      preInspection: '日常点検良好',
+      childSeatUsed: '適合チャイルドシート着用確認済',
+      gpsLogStatus: 'GPS全軌跡保管済'
+    },
+    {
+      recordId: 'TR-20260818-03',
+      date: '2026/08/18',
+      timeSlot: '17:00 - 17:25 (25分間)',
+      type: '夕便',
+      childName: '高橋 ソウタ くん (5歳・ぞう組)',
+      parentName: '高橋 恵 様',
+      departure: '三鷹市立大沢保育園',
+      destination: '三鷹市井口1丁目 ご自宅',
+      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
+      distanceKm: 3.5,
+      gasRate: 11,
+      actualCost: 38,
+      status: '運行完了',
+      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
+      preInspection: '日常点検良好',
+      childSeatUsed: '適合ジュニアシート着用確認済',
+      gpsLogStatus: 'GPS全軌跡保管済'
+    }
+  ],
   // ガソリン単価改訂の監査ログ（東京運輸支局提示用）
   gasRateAuditLogs: [
     {
@@ -242,7 +336,296 @@ const state = {
   driverSchedule: {
     availableDays: [3, 4, 5, 10, 11, 12, 17, 18, 19, 24, 25, 26],
     assignedDays: [11]
-  }
+  },
+  // 管理者ポータル管理状態
+  adminTab: 'ranking', // 'ranking' | 'users' | 'vehicles' | 'compliance'
+  adminUserFilter: 'all', // 'all' | 'driver' | 'parent' | 'both' | 'pending'
+  adminUserSearch: '',
+  adminSortKey: 'rating', // 'rating' | 'rides' | 'utilization'
+  // プラットフォーム全体 KPI サマリー
+  platformStats: {
+    totalUsers: 158,
+    totalDrivers: 46,
+    totalParents: 112,
+    monthlyRides: 432,
+    completionRate: 99.8, // 運行完了率 %
+    onTimeRate: 99.2,     // 定刻到着率 %
+    averageRating: 4.91,  // 平均保護者評価
+    safetyIncidentCount: 0 // 事故・誤認引き渡しゼロ
+  },
+  // ドライバー稼働率・評価ランキング
+  driverRankings: [
+    {
+      rank: 1,
+      id: 'd_kazuya',
+      name: '佐藤 カズヤ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user',
+      area: '三鷹市・武蔵野市',
+      facility: '三鷹市立牟礼保育園 / 大沢保育園',
+      method: '車 (シエンタ・ECE R129適合)',
+      methodType: 'Car',
+      monthlyRides: 38,
+      utilizationRate: 95.0, // 稼働可能日に対する稼働率%
+      rating: 4.98,
+      reviewsCount: 156,
+      onTimeRate: 100, // 定刻率%
+      alcoholCheckRate: 100, // 点検率%
+      badge: 'Sランク / 最優秀ゴールド',
+      badgeColor: '#eab308',
+      gasCostTotal: 1330, // 円
+      pointsEarned: 800,  // pt
+      status: 'active'
+    },
+    {
+      rank: 2,
+      id: 'd_kenta',
+      name: '高橋 ケンタ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=kenta',
+      area: '三鷹市下連雀・上連雀',
+      facility: '三鷹市立大沢保育園',
+      method: '車 (フリード・ドラレコ完備)',
+      methodType: 'Car',
+      monthlyRides: 32,
+      utilizationRate: 91.4,
+      rating: 4.94,
+      reviewsCount: 112,
+      onTimeRate: 99.2,
+      alcoholCheckRate: 100,
+      badge: 'Aランク / プラチナ',
+      badgeColor: '#6366f1',
+      gasCostTotal: 1120,
+      pointsEarned: 600,
+      status: 'active'
+    },
+    {
+      rank: 3,
+      id: 'd_aya',
+      name: '鈴木 アヤ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=aya',
+      area: '三鷹市中原・新川',
+      facility: '明泉幼稚園 / あゆみ保育園',
+      method: '電動アシスト自転車 (幼児2人同乗適合)',
+      methodType: 'Bicycle',
+      monthlyRides: 29,
+      utilizationRate: 88.6,
+      rating: 4.91,
+      reviewsCount: 88,
+      onTimeRate: 98.9,
+      alcoholCheckRate: 100,
+      badge: 'Aランク / ゴールド',
+      badgeColor: '#0ea5e9',
+      gasCostTotal: 0,
+      pointsEarned: 5800,
+      status: 'active'
+    },
+    {
+      rank: 4,
+      id: 'd_yuuki',
+      name: '渡辺 ユウキ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=yuuki',
+      area: '三鷹市上連雀',
+      facility: '三鷹市立上連雀保育園',
+      method: '徒歩見守り送迎',
+      methodType: 'Walking',
+      monthlyRides: 24,
+      utilizationRate: 85.7,
+      rating: 4.88,
+      reviewsCount: 64,
+      onTimeRate: 99.5,
+      alcoholCheckRate: 100,
+      badge: 'Bランク / シルバー',
+      badgeColor: '#64748b',
+      gasCostTotal: 0,
+      pointsEarned: 4800,
+      status: 'active'
+    },
+    {
+      rank: 5,
+      id: 'd_misaki',
+      name: '伊藤 ミサキ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=misaki',
+      area: '三鷹市井の頭',
+      facility: '三鷹市立井の頭保育園',
+      method: '車 (セレナ・チャイルドシート2台)',
+      methodType: 'Car',
+      monthlyRides: 20,
+      utilizationRate: 80.0,
+      rating: 4.85,
+      reviewsCount: 42,
+      onTimeRate: 98.0,
+      alcoholCheckRate: 100,
+      badge: 'Bランク / シルバー',
+      badgeColor: '#64748b',
+      gasCostTotal: 700,
+      pointsEarned: 400,
+      status: 'active'
+    }
+  ],
+  // 登録者全員の必要情報台帳（保護者・送迎者・兼任）
+  allRegistrants: [
+    {
+      id: 'REG-1001',
+      name: '佐藤 カズヤ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user',
+      role: 'driver',
+      roleLabel: '送迎協力者 (ドライバー)',
+      email: 'kazuya.sato@example.com',
+      phone: '090-1234-5678',
+      address: '東京都三鷹市牟礼4丁目12-3',
+      facility: '三鷹市立牟礼保育園 / 大沢保育園',
+      authStatus: 'verified',
+      authStatusLabel: '全書類審査適合（本人・在園・車検・保険）',
+      vehicle: {
+        model: 'トヨタ シエンタ ハイブリッド (7名定員)',
+        plateNumber: '多摩 501 さ 38-25',
+        shakenExpiry: '2027/10/15 (有効)',
+        insurance: '東京海上日動 (対人対物無制限・証券番号: TKN-88392019)',
+        childSeat: 'ECE R129適合 ISOFIX 1台 + ジュニアシート 1台',
+        dashcam: '前後2カメラ クラウド録画'
+      },
+      children: [
+        { name: '佐藤 リョウ', age: '5歳', classRoom: 'きりん組' }
+      ],
+      bankAccount: 'みずほ銀行 三鷹支店 (普 1234567 / サトウ カズヤ)',
+      registeredAt: '2026/04/01',
+      lastActive: '2026/08/28 08:35',
+      totalRides: 142,
+      rating: 4.98
+    },
+    {
+      id: 'REG-1002',
+      name: '山田 花子',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hanako',
+      role: 'parent',
+      roleLabel: '保護者 (依頼者)',
+      email: 'hanako.yamada@example.com',
+      phone: '090-9876-5432',
+      address: '東京都三鷹市下連雀3丁目8-15',
+      facility: '三鷹市立大沢保育園',
+      authStatus: 'verified',
+      authStatusLabel: '本人確認・在園確認済',
+      vehicle: null,
+      children: [
+        { name: '山田 太郎', age: '4歳', classRoom: 'きりん組 (アレルギー: なし)' }
+      ],
+      bankAccount: 'クレジットカード決済 (Visa ****4242)',
+      pointsBalance: 1400,
+      registeredAt: '2026/04/10',
+      lastActive: '2026/08/28 07:00',
+      totalRides: 48,
+      rating: 4.95
+    },
+    {
+      id: 'REG-1003',
+      name: '高橋 ケンタ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=kenta',
+      role: 'both',
+      roleLabel: '兼任（保護者 ＆ 送迎協力者）',
+      email: 'kenta.takahashi@example.com',
+      phone: '080-2345-6789',
+      address: '東京都三鷹市下連雀6丁目2-1',
+      facility: '三鷹市立大沢保育園',
+      authStatus: 'verified',
+      authStatusLabel: '全書類審査適合（本人・在園・車検・保険）',
+      vehicle: {
+        model: 'ホンダ フリード ハイブリッド (6名定員)',
+        plateNumber: '多摩 500 つ 88-12',
+        shakenExpiry: '2027/05/20 (有効)',
+        insurance: '三井住友海上 (対人対物無制限・証券番号: MS-7719203)',
+        childSeat: 'ECE R129適合チャイルドシート常設',
+        dashcam: 'コムテック前後2カメラ'
+      },
+      children: [
+        { name: '高橋 ソウタ', age: '5歳', classRoom: 'ぞう組' }
+      ],
+      bankAccount: '三菱UFJ銀行 三鷹支店 (普 9876543 / タカハシ ケンタ)',
+      registeredAt: '2026/04/15',
+      lastActive: '2026/08/27 17:30',
+      totalRides: 98,
+      rating: 4.94
+    },
+    {
+      id: 'REG-1004',
+      name: '鈴木 一郎',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ichiro',
+      role: 'parent',
+      roleLabel: '保護者 (依頼者)',
+      email: 'ichiro.suzuki@example.com',
+      phone: '090-3456-7890',
+      address: '東京都三鷹市野崎2丁目14-5',
+      facility: '三鷹市立大沢保育園',
+      authStatus: 'verified',
+      authStatusLabel: '本人確認・在園確認済',
+      vehicle: null,
+      children: [
+        { name: '鈴木 アリサ', age: '3歳', classRoom: 'うさぎ組' }
+      ],
+      bankAccount: 'クレジットカード決済 (MasterCard ****8811)',
+      pointsBalance: 800,
+      registeredAt: '2026/05/01',
+      lastActive: '2026/08/26 18:00',
+      totalRides: 36,
+      rating: 4.90
+    },
+    {
+      id: 'REG-1005',
+      name: '鈴木 アヤ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=aya',
+      role: 'driver',
+      roleLabel: '送迎協力者 (自転車)',
+      email: 'aya.suzuki@example.com',
+      phone: '080-4567-8901',
+      address: '東京都三鷹市中原1丁目19-2',
+      facility: '明泉幼稚園 / あゆみ保育園',
+      authStatus: 'verified',
+      authStatusLabel: '本人確認・在園確認・自転車保険加入済',
+      vehicle: {
+        model: 'パナソニック ギュット・クルーム (電動アシスト自転車)',
+        plateNumber: '防犯登録: 警視庁 第482910号',
+        shakenExpiry: '自転車点検適合証 (2026/06受検済)',
+        insurance: 'au損保 自転車向け保険 (賠償責任最高1億円補償)',
+        childSeat: '前後チャイルドシート (SGマーク・ヘルメット常備)',
+        dashcam: 'ヘルメット装着アクションカメラ録画'
+      },
+      children: [
+        { name: '鈴木 レン', age: '4歳', classRoom: '年中組' }
+      ],
+      bankAccount: '三井住友銀行 武蔵境支店 (普 3456789 / スズキ アヤ)',
+      registeredAt: '2026/05/12',
+      lastActive: '2026/08/28 09:10',
+      totalRides: 76,
+      rating: 4.91
+    },
+    {
+      id: 'REG-1006',
+      name: '小林 ダイスケ',
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=daisuke',
+      role: 'driver',
+      roleLabel: '送迎協力者 (審査中)',
+      email: 'daisuke.kobayashi@example.com',
+      phone: '090-5678-9012',
+      address: '東京都三鷹市深大寺2丁目3-9',
+      facility: '三鷹市立深大寺保育園',
+      authStatus: 'pending',
+      authStatusLabel: '車検証・任意保険証券の審査中',
+      vehicle: {
+        model: '日産 セレナ e-POWER (8名定員)',
+        plateNumber: '多摩 502 て 55-66',
+        shakenExpiry: '2027/08/30 (車検残存あり)',
+        insurance: '損保ジャパン (対人対物無制限確認中)',
+        childSeat: 'チャイルドシート適合申請中',
+        dashcam: '純正ドライブレコーダー'
+      },
+      children: [
+        { name: '小林 ユナ', age: '3歳', classRoom: 'りす組' }
+      ],
+      bankAccount: 'ゆうちょ銀行 (記号 10120 番号 99887761)',
+      registeredAt: '2026/08/26',
+      lastActive: '2026/08/26 14:20',
+      totalRides: 0,
+      rating: 0
+    }
+  ]
 };
 
 // 三鷹市内の座標マップデータ (Leaflet地図用)
@@ -747,9 +1130,11 @@ function AuthLoginView() {
       <div style="text-align:center; margin-top:32px;">
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">はじめての方はこちら</p>
         <a href="#" onclick="navigate('register')" style="color:var(--primary); font-size:1rem; font-weight:700;">利用者登録ページへ進む</a>
-        <div style="margin-top:24px;">
-          <a href="#" onclick="navigate('admin')" style="color:var(--text-muted); font-size:0.85rem; text-decoration:underline; display:block; margin-bottom:8px;">★ 登録データ管理者（事業母体）用ページへ</a>
-          <a href="#" onclick="navigate('facility-admin')" style="color:var(--text-muted); font-size:0.85rem; text-decoration:underline;">★【法人案内用】学童・提携施設ダッシュボードデモへ</a>
+        <div style="margin-top:24px; display:flex; flex-direction:column; gap:8px;">
+          <a href="#" onclick="navigate('admin')" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#1e293b; padding:10px; border-radius:8px; font-size:0.85rem; font-weight:700; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i class="ph-fill ph-shield-check" style="color:var(--primary); font-size:1.1rem;"></i> 管理者用 統括ポータル（ランキング・全登録者台帳・運行監査）
+          </a>
+          <a href="#" onclick="navigate('facility-admin')" style="color:var(--text-muted); font-size:0.8rem; text-decoration:underline;">【提携施設用】送迎・引き渡しモニタリング画面へ</a>
         </div>
       </div>
       </div>
@@ -951,13 +1336,34 @@ function ProfileView() {
           <span style="font-weight:700; color:var(--primary);"><i class="ph-fill ph-steering-wheel" style="margin-right:8px;"></i>稼働・実費精算ダッシュボード</span>
           <i class="ph ph-caret-right" style="color:var(--primary)"></i>
         </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px; cursor:pointer;" onclick="showVehicleEditModal()">
+          <span style="font-weight:600;"><i class="ph-fill ph-car" style="margin-right:8px; color:var(--primary);"></i>登録車両情報・車検証・保険の確認・変更</span>
+          <span style="font-size:0.75rem; color:#15803d; font-weight:700;">審査適合 <i class="ph ph-caret-right"></i></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px; cursor:pointer;" onclick="navigate('driver-dashboard')">
+          <span style="font-weight:600;"><i class="ph-fill ph-clipboard-text" style="margin-right:8px; color:var(--secondary);"></i>輸送記録（運行日報・走行ログ一覧）</span>
+          <i class="ph ph-caret-right" style="color:var(--text-muted)"></i>
+        </div>
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:12px; cursor:pointer;" onclick="showBankAccountModal()">
           <span style="font-weight:600;"><i class="ph ph-bank" style="margin-right:8px; color:var(--primary);"></i>実費振込先 銀行口座の登録・設定</span>
           <span style="font-size:0.75rem; color:var(--primary); font-weight:700;">${state.driverBankAccount.bankName || '未登録'} <i class="ph ph-caret-right"></i></span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="navigate('driver-verify')">
-          <span style="font-weight:600;"><i class="ph ph-identification-card" style="margin-right:8px;"></i>審査書類（運転免許証・同一施設在園確認書類等）のアップロード</span>
+          <span style="font-weight:600;"><i class="ph ph-identification-card" style="margin-right:8px;"></i>審査書類（運転免許証・車検証・在園確認等）</span>
           <i class="ph ph-caret-right" style="color:var(--text-muted)"></i>
+        </div>
+      </div>
+
+      <h3 style="margin-top:24px; font-size:1.1rem; color:var(--text-main); display:flex; align-items:center; gap:6px;">
+        <i class="ph-fill ph-gear" style="color:#64748b;"></i> システム管理者メニュー
+      </h3>
+      <div class="card" style="margin-bottom:24px; padding: 12px 16px; background:#f8fafc; border:1px solid #cbd5e1;">
+        <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="navigate('admin')">
+          <div>
+            <strong style="color:var(--primary); font-size:0.95rem; display:block;"><i class="ph-fill ph-shield-check" style="margin-right:6px;"></i>KidsRide 統括管理ポータル</strong>
+            <span style="font-size:0.75rem; color:var(--text-muted);">稼働率・評価ランキング／全登録者台帳／車両・運行日報監査</span>
+          </div>
+          <i class="ph ph-caret-right" style="color:var(--primary); font-size:1.1rem;"></i>
         </div>
       </div>
     </main>
@@ -2212,12 +2618,658 @@ window.exportGasAuditCSV = function() {
   link.click();
 };
 
+// 輸送記録（運行日報）のCSVエクスポート（行政・運輸支局提示用・監査用）
+window.exportTransportRecordsCSV = function() {
+  const records = state.transportRecords || [];
+  let csv = '輸送記録ID,運行日,時間帯,便種別,送迎児童名,保護者名,出発地,到着地,使用車両,実走行距離(km),ガソリン実費単価(円/km),算定実費(円),運行ステータス,出庫前アルコール検査,日常点検結果,チャイルドシート,GPSログ状態\n';
+  records.forEach(r => {
+    csv += `"${r.recordId}","${r.date}","${r.timeSlot}","${r.type}","${r.childName}","${r.parentName}","${r.departure}","${r.destination}","${r.transportMethod}",${r.distanceKm},${r.gasRate},${r.actualCost},"${r.status}","${r.alcoholCheck}","${r.preInspection}","${r.childSeatUsed}","${r.gpsLogStatus}"\n`;
+  });
+  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `KidsRide_輸送記録_運行日報_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+};
+
+// 管理者ポータル：タブ切り替え
+window.setAdminTab = function(tabName) {
+  state.adminTab = tabName;
+  navigate('admin');
+};
+
+// 管理者ポータル：登録者フィルター切り替え
+window.setAdminUserFilter = function(filter) {
+  state.adminUserFilter = filter;
+  navigate('admin');
+};
+
+// 管理者ポータル：登録者検索
+window.setAdminUserSearch = function(query) {
+  state.adminUserSearch = query.trim().toLowerCase();
+  navigate('admin');
+};
+
+// 管理者ポータル：ランキング並び替え
+window.setAdminSortKey = function(sortKey) {
+  state.adminSortKey = sortKey;
+  navigate('admin');
+};
+
+// 管理者ポータル：全登録者CSVダウンロード
+window.exportAllRegistrantsCSV = function() {
+  const users = state.allRegistrants || [];
+  let csv = 'ユーザーID,氏名,区分,メールアドレス,電話番号,居住住所,所属施設,認証状態,登録児童,登録車両,車検満了日,任意保険,受取口座/決済,登録日,直近活動,送迎完了数,評価\n';
+  users.forEach(u => {
+    const childrenStr = (u.children || []).map(c => `${c.name}(${c.age} ${c.classRoom || ''})`).join('; ');
+    const v = u.vehicle;
+    const vehicleStr = v ? `${v.model} [${v.plateNumber}]` : 'なし';
+    const shakenStr = v ? v.shakenExpiry : '非該当';
+    const insStr = v ? v.insurance : '非該当';
+    csv += `"${u.id}","${u.name}","${u.roleLabel}","${u.email}","${u.phone}","${u.address}","${u.facility}","${u.authStatusLabel}","${childrenStr}","${vehicleStr}","${shakenStr}","${insStr}","${u.bankAccount || ''}","${u.registeredAt}","${u.lastActive}",${u.totalRides || 0},${u.rating || 0}\n`;
+  });
+  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `KidsRide_全登録者台帳_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+};
+
+// 管理者ポータル：登録者詳細モーダル
+window.showUserDetailModal = function(userId) {
+  const existing = document.getElementById('admin-user-detail-modal');
+  if (existing) existing.remove();
+
+  const u = (state.allRegistrants || []).find(item => item.id === userId);
+  if (!u) return;
+
+  const childrenHtml = (u.children || []).length > 0 ? (u.children || []).map(c => `
+    <div style="background:white; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:0.8rem;">
+      <strong>${c.name}</strong> (${c.age}) - ${c.classRoom || '所属園児'}
+    </div>
+  `).join('') : '<span style="font-size:0.8rem; color:var(--text-muted);">登録児童なし（送迎専任協力者）</span>';
+
+  let vehicleHtml = '';
+  if (u.vehicle) {
+    const v = u.vehicle;
+    vehicleHtml = `
+      <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px; margin-bottom:12px;">
+        <h4 style="margin:0 0 8px 0; font-size:0.85rem; color:var(--primary); display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-car"></i> 登録車両・安全検査情報
+        </h4>
+        <div style="font-size:0.78rem; line-height:1.6; color:#334155;">
+          <div>・<strong>車種:</strong> ${v.model}</div>
+          <div>・<strong>登録番号:</strong> <span style="font-weight:700; background:#e2e8f0; padding:1px 6px; border-radius:4px;">${v.plateNumber}</span></div>
+          <div>・<strong>車検証満了日:</strong> <span style="color:#15803d; font-weight:700;">${v.shakenExpiry}</span></div>
+          <div>・<strong>任意保険:</strong> ${v.insurance}</div>
+          <div>・<strong>チャイルドシート:</strong> ${v.childSeat || '未設定'}</div>
+          <div>・<strong>ドライブレコーダー:</strong> ${v.dashcam || '未設定'}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const modalHtml = `
+    <div id="admin-user-detail-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:480px; padding:20px; border-radius:16px; box-shadow:var(--shadow-xl); max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <img src="${u.avatar}" alt="${u.name}" style="width:42px; height:42px; border-radius:50%; border:2px solid var(--primary);">
+            <div>
+              <h3 style="margin:0; font-size:1.1rem; color:var(--text-main); font-weight:700;">${u.name} 様</h3>
+              <span style="font-size:0.72rem; color:var(--text-muted);">${u.id} | ${u.roleLabel}</span>
+            </div>
+          </div>
+          <button onclick="document.getElementById('admin-user-detail-modal').remove()" style="background:none; border:none; font-size:1.4rem; color:var(--text-muted); cursor:pointer;">×</button>
+        </div>
+
+        <div style="font-size:0.82rem; line-height:1.6; color:var(--text-main);">
+          <!-- 審査ステータスバナー -->
+          <div style="background:${u.authStatus === 'verified' ? '#f0fdf4' : '#fffbeb'}; border:1px solid ${u.authStatus === 'verified' ? '#bbf7d0' : '#fde68a'}; border-radius:8px; padding:10px 12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <span style="font-size:0.75rem; color:${u.authStatus === 'verified' ? '#166534' : '#854d0e'}; font-weight:700;">
+                <i class="ph-fill ${u.authStatus === 'verified' ? 'ph-check-circle' : 'ph-clock'}"></i> ${u.authStatusLabel}
+              </span>
+            </div>
+            ${u.authStatus === 'pending' ? `
+              <button class="btn btn-primary" style="padding:4px 10px; font-size:0.72rem; width:auto;" onclick="updateUserStatus('${u.id}', 'verified')">審査承認する</button>
+            ` : ''}
+          </div>
+
+          <!-- 基本情報ブロック -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <h4 style="margin:0 0 6px 0; font-size:0.85rem; color:var(--text-main);">基本情報・連絡先</h4>
+            <div style="font-size:0.78rem; line-height:1.6; color:#475569;">
+              <div>・<strong>電話番号:</strong> <a href="tel:${u.phone}" style="color:var(--primary); font-weight:600;">${u.phone}</a></div>
+              <div>・<strong>メール:</strong> ${u.email}</div>
+              <div>・<strong>居住住所:</strong> ${u.address}</div>
+              <div>・<strong>所属施設:</strong> <strong>${u.facility}</strong></div>
+              <div>・<strong>登録日:</strong> ${u.registeredAt} (最終活動: ${u.lastActive})</div>
+            </div>
+          </div>
+
+          <!-- 車両情報ブロック -->
+          ${vehicleHtml}
+
+          <!-- 登録児童情報 -->
+          <div style="margin-bottom:12px;">
+            <h4 style="margin:0 0 6px 0; font-size:0.85rem; color:var(--text-main);">登録児童情報</h4>
+            ${childrenHtml}
+          </div>
+
+          <!-- 決済 / 振込受取口座情報 -->
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin-bottom:16px; font-size:0.78rem;">
+            <strong>【決済・口座設定】</strong><br>
+            ${u.bankAccount}
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button onclick="document.getElementById('admin-user-detail-modal').remove()" class="btn btn-outline" style="flex:1;">閉じる</button>
+            <button onclick="showCustomAlert('データ更新', '${u.name} 様の登録情報は正常に保持されています。')" class="btn btn-primary" style="flex:1;">情報を保存・確認</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// 審査ステータス更新関数
+window.updateUserStatus = function(userId, newStatus) {
+  const u = (state.allRegistrants || []).find(item => item.id === userId);
+  if (u) {
+    u.authStatus = newStatus;
+    u.authStatusLabel = '全書類審査適合（承認完了）';
+    const modal = document.getElementById('admin-user-detail-modal');
+    if (modal) modal.remove();
+    showCustomAlert('審査承認完了', `${u.name} 様の書類審査を承認し、送迎マッチング受託可能ステータスへ移行しました。`, () => {
+      navigate('admin');
+    });
+  }
+};
+
+// 車両情報 編集・更新モーダル
+window.showVehicleEditModal = function() {
+  const existing = document.getElementById('vehicle-edit-modal');
+  if (existing) existing.remove();
+
+  const v = state.driverVehicle;
+  const modalHtml = `
+    <div id="vehicle-edit-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:440px; padding:20px; border-radius:16px; box-shadow:var(--shadow-xl); max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+          <h3 style="margin:0; font-size:1.1rem; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-car" style="color:var(--primary);"></i> 登録車両情報の編集・更新
+          </h3>
+          <button onclick="document.getElementById('vehicle-edit-modal').remove()" style="background:none; border:none; font-size:1.4rem; color:var(--text-muted); cursor:pointer;">×</button>
+        </div>
+
+        <form id="vehicle-edit-form" onsubmit="event.preventDefault(); saveVehicleInfo();">
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">車種・メーカー名 <span style="color:var(--danger);">*</span></label>
+            <input type="text" id="v-model" class="form-control" value="${v.model}" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div>
+              <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">登録番号 (ナンバー) <span style="color:var(--danger);">*</span></label>
+              <input type="text" id="v-plate" class="form-control" value="${v.plateNumber}" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+            <div>
+              <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">車体カラー</label>
+              <input type="text" id="v-color" class="form-control" value="${v.color}" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+            </div>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">乗車定員</label>
+            <input type="text" id="v-capacity" class="form-control" value="${v.capacity}" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">車検証 有効期間満了日 <span style="color:var(--danger);">*</span></label>
+            <input type="text" id="v-shaken" class="form-control" value="${v.shakenExpiry}" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">任意保険 加入会社・証券番号 <span style="color:var(--danger);">*</span></label>
+            <input type="text" id="v-insurance" class="form-control" value="${v.voluntaryInsurance}" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">任意保険 補償内容 <span style="color:var(--danger);">*</span></label>
+            <textarea id="v-coverage" class="form-control" rows="2" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.8rem;">${v.insuranceCoverage}</textarea>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">チャイルドシート・ジュニアシート装備 <span style="color:var(--danger);">*</span></label>
+            <input type="text" id="v-childseat" class="form-control" value="${v.childSeatType}" required style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--text-main); display:block; margin-bottom:4px;">ドライブレコーダー装備状況</label>
+            <input type="text" id="v-dashcam" class="form-control" value="${v.dashcam}" style="width:100%; padding:8px; border:1px solid #cbd5e1; border-radius:6px; font-size:0.85rem;">
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button type="button" onclick="document.getElementById('vehicle-edit-modal').remove()" class="btn btn-outline" style="flex:1;">キャンセル</button>
+            <button type="submit" class="btn btn-primary" style="flex:1;">変更を保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.saveVehicleInfo = function() {
+  state.driverVehicle.model = document.getElementById('v-model').value;
+  state.driverVehicle.plateNumber = document.getElementById('v-plate').value;
+  state.driverVehicle.color = document.getElementById('v-color').value;
+  state.driverVehicle.capacity = document.getElementById('v-capacity').value;
+  state.driverVehicle.shakenExpiry = document.getElementById('v-shaken').value;
+  state.driverVehicle.voluntaryInsurance = document.getElementById('v-insurance').value;
+  state.driverVehicle.insuranceCoverage = document.getElementById('v-coverage').value;
+  state.driverVehicle.childSeatType = document.getElementById('v-childseat').value;
+  state.driverVehicle.dashcam = document.getElementById('v-dashcam').value;
+
+  const modal = document.getElementById('vehicle-edit-modal');
+  if (modal) modal.remove();
+
+  showCustomAlert('登録完了', '登録車両情報が正常に更新されました。', () => {
+    navigate('driver-dashboard');
+  });
+};
+
+// 個別輸送記録の詳細表示モーダル
+window.showTransportRecordModal = function(recordId) {
+  const existing = document.getElementById('record-detail-modal');
+  if (existing) existing.remove();
+
+  const r = (state.transportRecords || []).find(item => item.recordId === recordId);
+  if (!r) return;
+
+  const modalHtml = `
+    <div id="record-detail-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:440px; padding:20px; border-radius:16px; box-shadow:var(--shadow-xl); max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+          <div>
+            <span style="font-size:0.75rem; background:#def7ec; color:#03543f; padding:2px 8px; border-radius:4px; font-weight:700;">${r.status}</span>
+            <h3 style="margin:4px 0 0 0; font-size:1.1rem; color:var(--text-main); font-weight:700;">
+              輸送日報詳細 (${r.recordId})
+            </h3>
+          </div>
+          <button onclick="document.getElementById('record-detail-modal').remove()" style="background:none; border:none; font-size:1.4rem; color:var(--text-muted); cursor:pointer;">×</button>
+        </div>
+
+        <div style="font-size:0.82rem; line-height:1.6; color:var(--text-main);">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted);">運行日時:</span>
+              <strong>${r.date} ${r.timeSlot}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted);">送迎対象:</span>
+              <strong>${r.childName}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:var(--text-muted);">依頼保護者:</span>
+              <strong>${r.parentName}</strong>
+            </div>
+          </div>
+
+          <div style="border-left:3px solid var(--primary); padding-left:10px; margin-bottom:12px;">
+            <div style="font-size:0.75rem; color:var(--text-muted);">運行区間</div>
+            <div style="font-weight:700; margin-top:2px;">発：${r.departure}</div>
+            <div style="font-weight:700; margin-top:2px;">着：${r.destination}</div>
+          </div>
+
+          <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:#92400e; margin-bottom:6px; font-size:0.85rem;">
+              <i class="ph-fill ph-calculator"></i> 道路運送法準拠 実費精算内訳
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:#78350f;">実走行距離:</span>
+              <strong>${r.distanceKm} km</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:#78350f;">公認ガソリン実費単価:</span>
+              <strong>¥${r.gasRate} / km</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; border-top:1px dashed #fcd34d; padding-top:4px; margin-top:4px;">
+              <span style="color:#78350f; font-weight:700;">精算対象ガソリン代:</span>
+              <strong style="color:var(--primary); font-size:1.05rem;">¥${r.actualCost}（実費のみ / 利益¥0）</strong>
+            </div>
+          </div>
+
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:16px;">
+            <div style="font-weight:700; color:#166534; margin-bottom:6px; font-size:0.85rem;">
+              <i class="ph-fill ph-shield-check"></i> 安全確認・法令遵守記録
+            </div>
+            <div style="font-size:0.78rem; margin-bottom:4px;">
+              ・<strong>出庫前アルコール検査:</strong> <span style="color:#15803d; font-weight:700;">${r.alcoholCheck}</span>
+            </div>
+            <div style="font-size:0.78rem; margin-bottom:4px;">
+              ・<strong>運行前日常点検:</strong> <span style="color:#15803d; font-weight:700;">${r.preInspection}</span>
+            </div>
+            <div style="font-size:0.78rem; margin-bottom:4px;">
+              ・<strong>安全装備:</strong> <span style="color:#15803d; font-weight:700;">${r.childSeatUsed}</span>
+            </div>
+            <div style="font-size:0.78rem;">
+              ・<strong>運行ログ管理:</strong> <span style="color:#15803d; font-weight:700;">${r.gpsLogStatus}</span>
+            </div>
+          </div>
+
+          <button onclick="document.getElementById('record-detail-modal').remove()" class="btn btn-primary" style="width:100%;">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
 function AdminView() {
-  return `
-    ${renderHeader('管理者ダッシュボード')}
-    <main class="fade-in" style="padding-top:20px;">
-      <!-- ガソリン価格連動 実費単価設定 ＆ 監査ログ管理（東京運輸支局コンプライアンス適合） -->
-      <div class="card" style="margin-bottom:24px; text-align:left; border-left:4px solid var(--primary);">
+  const currentTab = state.adminTab || 'ranking';
+  const filter = state.adminUserFilter || 'all';
+  const search = state.adminUserSearch || '';
+  const sortKey = state.adminSortKey || 'rating';
+
+  // 1. ランキングソートロジック
+  let rankedDrivers = [...(state.driverRankings || [])];
+  if (sortKey === 'rating') {
+    rankedDrivers.sort((a, b) => b.rating - a.rating);
+  } else if (sortKey === 'rides') {
+    rankedDrivers.sort((a, b) => b.monthlyRides - a.monthlyRides);
+  } else if (sortKey === 'utilization') {
+    rankedDrivers.sort((a, b) => b.utilizationRate - a.utilizationRate);
+  }
+
+  // 2. 登録者フィルタ＆検索ロジック
+  let filteredUsers = (state.allRegistrants || []).filter(u => {
+    // フィルター判定
+    if (filter === 'driver' && u.role !== 'driver' && u.role !== 'both') return false;
+    if (filter === 'parent' && u.role !== 'parent') return false;
+    if (filter === 'both' && u.role !== 'both') return false;
+    if (filter === 'pending' && u.authStatus !== 'pending') return false;
+
+    // 検索判定
+    if (search) {
+      const targetStr = `${u.name} ${u.email} ${u.phone} ${u.facility} ${u.address} ${u.vehicle ? u.vehicle.model + u.vehicle.plateNumber : ''}`.toLowerCase();
+      if (!targetStr.includes(search)) return false;
+    }
+    return true;
+  });
+
+  // タブボタンのアクティブスタイル判定
+  const getTabStyle = (tab) => {
+    const isActive = (currentTab === tab);
+    return `flex:1; padding:10px 8px; text-align:center; font-size:0.8rem; font-weight:700; cursor:pointer; border-bottom:3px solid ${isActive ? 'var(--primary)' : 'transparent'}; color:${isActive ? 'var(--primary)' : 'var(--text-muted)'}; background:${isActive ? 'white' : '#f8fafc'}; transition:all 0.2s ease;`;
+  };
+
+  // タブコンテンツの生成
+  let tabContentHtml = '';
+
+  // ==========================================
+  // 【タブ1】稼働率 ＆ 評価ランキング
+  // ==========================================
+  if (currentTab === 'ranking') {
+    tabContentHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-trophy" style="color:#eab308;"></i> 送迎協力者（ドライバー）稼働率・評価ランキング
+          </h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">保護者レビュー、月間送迎完了実績、定刻到着率および点検実施状況</span>
+        </div>
+        <div style="display:flex; gap:6px; font-size:0.75rem;">
+          <button class="btn ${sortKey === 'rating' ? 'btn-primary' : 'btn-outline'}" style="padding:4px 10px; font-size:0.72rem; width:auto;" onclick="setAdminSortKey('rating')">総合評価順</button>
+          <button class="btn ${sortKey === 'rides' ? 'btn-primary' : 'btn-outline'}" style="padding:4px 10px; font-size:0.72rem; width:auto;" onclick="setAdminSortKey('rides')">送迎件数順</button>
+          <button class="btn ${sortKey === 'utilization' ? 'btn-primary' : 'btn-outline'}" style="padding:4px 10px; font-size:0.72rem; width:auto;" onclick="setAdminSortKey('utilization')">稼働率順</button>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+        ${rankedDrivers.map((d, index) => {
+          let medalBadge = '';
+          if (index === 0) medalBadge = '<span style="background:#fef08a; color:#854d0e; font-weight:800; padding:2px 8px; border-radius:12px; font-size:0.75rem; border:1px solid #facc15;">🥇 1位</span>';
+          else if (index === 1) medalBadge = '<span style="background:#f1f5f9; color:#475569; font-weight:800; padding:2px 8px; border-radius:12px; font-size:0.75rem; border:1px solid #cbd5e1;">🥈 2位</span>';
+          else if (index === 2) medalBadge = '<span style="background:#ffedd5; color:#9a3412; font-weight:800; padding:2px 8px; border-radius:12px; font-size:0.75rem; border:1px solid #fdba74;">🥉 3位</span>';
+          else medalBadge = `<span style="background:#f8fafc; color:#64748b; font-weight:700; padding:2px 8px; border-radius:12px; font-size:0.75rem;">${index + 1}位</span>`;
+
+          return `
+            <div class="card" style="padding:14px; margin:0; border-left:4px solid ${d.badgeColor}; box-shadow:var(--shadow-sm);">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <img src="${d.avatar}" alt="${d.name}" style="width:48px; height:48px; border-radius:50%; border:2px solid #e2e8f0;">
+                  <div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      ${medalBadge}
+                      <strong style="font-size:1rem; color:var(--text-main);">${d.name}</strong>
+                      <span style="font-size:0.68rem; background:${d.badgeColor}15; color:${d.badgeColor}; padding:2px 6px; border-radius:4px; font-weight:700;">${d.badge}</span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                      ${d.area} | ${d.facility}
+                    </div>
+                  </div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:1.15rem; font-weight:800; color:var(--warning); display:flex; align-items:center; gap:4px; justify-content:flex-end;">
+                    <i class="ph-fill ph-star"></i> ${d.rating.toFixed(2)}
+                  </div>
+                  <span style="font-size:0.7rem; color:var(--text-muted);">(${d.reviewsCount}件の評価)</span>
+                </div>
+              </div>
+
+              <!-- メトリクスグリッド -->
+              <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:10px; text-align:center;">
+                <div>
+                  <span style="font-size:0.68rem; color:var(--text-muted); display:block;">月間送迎</span>
+                  <strong style="font-size:1.05rem; color:var(--primary);">${d.monthlyRides}<span style="font-size:0.7rem;">回</span></strong>
+                </div>
+                <div>
+                  <span style="font-size:0.68rem; color:var(--text-muted); display:block;">稼働率</span>
+                  <strong style="font-size:1.05rem; color:var(--text-main);">${d.utilizationRate}<span style="font-size:0.7rem;">%</span></strong>
+                </div>
+                <div>
+                  <span style="font-size:0.68rem; color:var(--text-muted); display:block;">定刻到着率</span>
+                  <strong style="font-size:1.05rem; color:#15803d;">${d.onTimeRate}<span style="font-size:0.7rem;">%</span></strong>
+                </div>
+                <div>
+                  <span style="font-size:0.68rem; color:var(--text-muted); display:block;">点検・検知率</span>
+                  <strong style="font-size:1.05rem; color:#15803d;">${d.alcoholCheckRate}<span style="font-size:0.7rem;">%</span></strong>
+                </div>
+              </div>
+
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.75rem;">
+                <span style="color:var(--text-muted);"><i class="ph-fill ph-steering-wheel"></i> ${d.method}</span>
+                <button class="btn btn-outline" style="padding:4px 10px; font-size:0.72rem; width:auto; border-color:var(--primary); color:var(--primary);" onclick="showUserDetailModal('${d.id === 'd_kazuya' ? 'REG-1001' : d.id === 'd_kenta' ? 'REG-1003' : 'REG-1005'}')">
+                  詳細台帳を確認
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // ==========================================
+  // 【タブ2】全登録者総合管理台帳
+  // ==========================================
+  else if (currentTab === 'users') {
+    const totalCount = (state.allRegistrants || []).length;
+    const driverCount = (state.allRegistrants || []).filter(u => u.role === 'driver' || u.role === 'both').length;
+    const parentCount = (state.allRegistrants || []).filter(u => u.role === 'parent').length;
+    const pendingCount = (state.allRegistrants || []).filter(u => u.authStatus === 'pending').length;
+
+    tabContentHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-users-three" style="color:var(--primary);"></i> 登録者総合台帳
+          </h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">保護者・送迎協力者の個人情報、登録児童、車検証・保険、認証ステータス</span>
+        </div>
+        <button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem; width:auto; display:flex; align-items:center; gap:6px;" onclick="exportAllRegistrantsCSV()">
+          <i class="ph ph-file-csv"></i> 全登録者台帳CSV出力
+        </button>
+      </div>
+
+      <!-- 検索 ＆ 絞り込みフィルター -->
+      <div class="card" style="padding:12px; margin-bottom:14px; background:#f8fafc; border:1px solid #e2e8f0;">
+        <div style="margin-bottom:10px;">
+          <input type="text" class="form-control" placeholder="名前、所属保育園、電話番号、メール、車両ナンバーで検索..." value="${search}" oninput="setAdminUserSearch(this.value)" style="width:100%; padding:8px 12px; font-size:0.85rem; border-radius:6px; border:1px solid #cbd5e1;">
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn ${filter === 'all' ? 'btn-primary' : 'btn-outline'}" style="padding:4px 10px; font-size:0.72rem; width:auto;" onclick="setAdminUserFilter('all')">全員 (${totalCount})</button>
+          <button class="btn ${filter === 'driver' ? 'btn-primary' : 'btn-outline'}" style="padding:4px 10px; font-size:0.72rem; width:auto;" onclick="setAdminUserFilter('driver')">送迎者のみ (${driverCount})</button>
+          <button class="btn ${filter === 'parent' ? 'btn-primary' : 'btn-outline'}" style="padding:4px 10px; font-size:0.72rem; width:auto;" onclick="setAdminUserFilter('parent')">保護者のみ (${parentCount})</button>
+          <button class="btn ${filter === 'pending' ? 'btn-primary' : 'btn-outline'}" style="padding:4px 10px; font-size:0.72rem; width:auto; border-color:${filter === 'pending' ? 'var(--warning)' : '#e2e8f0'}; color:${filter === 'pending' ? 'white' : '#b45309'}; background:${filter === 'pending' ? '#d97706' : '#fffbeb'};" onclick="setAdminUserFilter('pending')">審査中 (${pendingCount})</button>
+        </div>
+      </div>
+
+      <!-- 登録者一覧テーブル -->
+      <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px; box-shadow:var(--shadow-sm); background:white;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.75rem; text-align:left;">
+          <thead>
+            <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1; color:#475569;">
+              <th style="padding:10px 8px;">登録ID / 氏名</th>
+              <th style="padding:10px 8px;">区分 / 所属施設</th>
+              <th style="padding:10px 8px;">認証状態</th>
+              <th style="padding:10px 8px;">登録児童 / 車両</th>
+              <th style="padding:10px 8px; text-align:center;">詳細操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filteredUsers.map(u => `
+              <tr style="border-bottom:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                <td style="padding:10px 8px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <img src="${u.avatar}" alt="${u.name}" style="width:34px; height:34px; border-radius:50%; border:1px solid #cbd5e1;">
+                    <div>
+                      <strong style="color:var(--text-main); display:block; font-size:0.85rem;">${u.name}</strong>
+                      <span style="font-size:0.68rem; color:var(--text-muted);">${u.id}</span>
+                    </div>
+                  </div>
+                </td>
+                <td style="padding:10px 8px;">
+                  <span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-size:0.68rem; font-weight:700;">${u.roleLabel.split(' ')[0]}</span>
+                  <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">${u.facility}</div>
+                </td>
+                <td style="padding:10px 8px;">
+                  <span style="background:${u.authStatus === 'verified' ? '#def7ec' : '#fef3c7'}; color:${u.authStatus === 'verified' ? '#03543f' : '#92400e'}; padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.68rem; display:inline-flex; align-items:center; gap:4px;">
+                    <i class="ph-fill ${u.authStatus === 'verified' ? 'ph-check-circle' : 'ph-clock'}"></i> ${u.authStatus === 'verified' ? '審査適合' : '書類確認中'}
+                  </span>
+                </td>
+                <td style="padding:10px 8px;">
+                  ${u.vehicle ? `<span style="display:block; font-weight:600; color:var(--primary); font-size:0.72rem;"><i class="ph-fill ph-car"></i> ${u.vehicle.model.split(' ')[0]} (${u.vehicle.plateNumber.split(' ')[2] || ''})</span>` : ''}
+                  <span style="color:var(--text-muted); font-size:0.7rem;">子: ${(u.children || []).map(c => c.name).join('・') || 'なし'}</span>
+                </td>
+                <td style="padding:10px 8px; text-align:center; white-space:nowrap;">
+                  <button class="btn btn-outline" style="padding:4px 8px; font-size:0.72rem; width:auto; border-color:var(--primary); color:var(--primary);" onclick="showUserDetailModal('${u.id}')">
+                    確認・編集
+                  </button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  // ==========================================
+  // 【タブ3】車両安全管理台帳 ＆ 輸送日報
+  // ==========================================
+  else if (currentTab === 'vehicles') {
+    tabContentHtml = `
+      <div class="card" style="margin-bottom:20px; border-top:4px solid var(--secondary); padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-clipboard-text" style="color:var(--secondary);"></i> 全輸送記録（運行日報）監査台帳
+            </h3>
+            <span style="font-size:0.72rem; color:var(--text-muted);">道路運送法適合・出庫前アルコール検査・日常点検・GPS全測位ログ</span>
+          </div>
+          <button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem; width:auto; display:flex; align-items:center; gap:6px;" onclick="exportTransportRecordsCSV()">
+            <i class="ph ph-file-csv"></i> 運行日報CSV出力
+          </button>
+        </div>
+
+        <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:12px;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.72rem; text-align:left;">
+            <thead>
+              <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:var(--text-muted);">
+                <th style="padding:8px;">輸送ID / 日時</th>
+                <th style="padding:8px;">送迎児童・保護者</th>
+                <th style="padding:8px;">区間（発着）</th>
+                <th style="padding:8px; text-align:right;">走行/実費</th>
+                <th style="padding:8px; text-align:center;">点検/Alc</th>
+                <th style="padding:8px; text-align:center;">詳細</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(state.transportRecords || []).map(r => `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:8px;">
+                    <strong style="color:var(--text-main);">${r.recordId}</strong><br>
+                    <span style="color:var(--text-muted); font-size:0.68rem;">${r.date} ${r.timeSlot.split(' ')[0]}</span>
+                  </td>
+                  <td style="padding:8px;">
+                    <strong>${r.childName}</strong><br>
+                    <span style="color:var(--text-muted); font-size:0.68rem;">依頼: ${r.parentName}</span>
+                  </td>
+                  <td style="padding:8px;">
+                    ${r.departure.split(' ')[0]} → ${r.destination.split(' ')[0]}
+                  </td>
+                  <td style="padding:8px; text-align:right;">
+                    <strong>${r.distanceKm} km</strong><br>
+                    <span style="color:var(--secondary); font-weight:700;">¥${r.actualCost}</span>
+                  </td>
+                  <td style="padding:8px; text-align:center;">
+                    <span style="background:#def7ec; color:#03543f; padding:2px 6px; border-radius:4px; font-size:0.68rem; font-weight:700;">良好</span>
+                    <div style="font-size:0.65rem; color:#15803d; margin-top:2px;">0.00mg/L</div>
+                  </td>
+                  <td style="padding:8px; text-align:center;">
+                    <button class="btn btn-outline" style="padding:4px 8px; font-size:0.7rem; width:auto; border-color:var(--primary); color:var(--primary);" onclick="showTransportRecordModal('${r.recordId}')">確認</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 登録車両安全管理台帳 -->
+      <div class="card" style="padding:16px; border-top:4px solid var(--primary);">
+        <h3 style="margin:0 0 10px 0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-car" style="color:var(--primary);"></i> 登録ドライバー・車両安全管理台帳
+        </h3>
+        <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <strong style="font-size:0.9rem; color:var(--text-main);">佐藤 カズヤ (多摩地区 / 三鷹)</strong>
+              <span style="font-size:0.72rem; background:#def7ec; color:#03543f; padding:2px 6px; border-radius:4px; font-weight:700;">認証適合</span>
+            </div>
+            <div style="font-size:0.78rem; color:#334155; line-height:1.5;">
+              <div>・車両: <strong>${state.driverVehicle.model}</strong> (${state.driverVehicle.plateNumber})</div>
+              <div>・車検満了日: <strong style="color:#15803d;">${state.driverVehicle.shakenExpiry}</strong></div>
+              <div>・任意保険: ${state.driverVehicle.voluntaryInsurance} (${state.driverVehicle.insuranceCoverage})</div>
+              <div>・チャイルドシート: ${state.driverVehicle.childSeatType}</div>
+              <div>・ドライブレコーダー: ${state.driverVehicle.dashcam}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ==========================================
+  // 【タブ4】法令遵守・実費ガソリン単価管理
+  // ==========================================
+  else if (currentTab === 'compliance') {
+    tabContentHtml = `
+      <div class="card" style="margin-bottom:24px; text-align:left; border-left:4px solid var(--primary); padding:16px;">
         <h3 style="color:var(--primary); margin-top:0; font-size:1.05rem; display:flex; align-items:center; gap:6px;">
           <i class="ph-fill ph-gas-pump"></i> ガソリン実費単価（円/km）改訂・管理
         </h3>
@@ -2263,19 +3315,70 @@ function AdminView() {
           <i class="ph ph-file-text"></i> 運輸支局提示用 監査ログ(CSV)をダウンロード
         </button>
       </div>
+    `;
+  }
 
-      <div class="card" style="text-align:center; margin-bottom:24px;">
-        <h3 style="color:var(--primary); margin-top:8px;">登録者データの管理</h3>
-        <p style="font-size:0.9rem; margin-bottom:24px;">システムに登録されている全ユーザー（保護者・送迎者）の情報をエクスポートできます。</p>
-        <button class="btn btn-primary" onclick="exportCSV()">
-          <i class="ph ph-download-simple"></i> ユーザー情報CSVをダウンロード
+  return `
+    ${renderHeader('KidsRide 統括管理ポータル')}
+    <main class="fade-in" style="padding-top:16px; padding-bottom:80px;">
+      <!-- プラットフォーム全体 KPI サマリーヘッダー -->
+      <div class="card" style="background:linear-gradient(135deg, #1e3a8a, #0284c7); color:white; margin-bottom:16px; padding:16px; box-shadow:var(--shadow-md);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <div>
+            <span style="font-size:0.7rem; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:10px; font-weight:600;">Executive Management Portal</span>
+            <h2 style="color:white; font-size:1.25rem; margin:4px 0 0 0; font-weight:800;">KidsRide 運行統括・監査ダッシュボード</h2>
+          </div>
+          <button class="btn btn-outline" onclick="navigate('dashboard')" style="background:rgba(255,255,255,0.15); color:white; border-color:white; padding:4px 12px; font-size:0.75rem; width:auto;">
+            通常画面へ
+          </button>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; text-align:center;">
+          <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">総登録者数</span>
+            <strong style="font-size:1.15rem; color:#fef08a;">${state.platformStats.totalUsers}<span style="font-size:0.7rem;"> 名</span></strong>
+          </div>
+          <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">月間送迎数</span>
+            <strong style="font-size:1.15rem; color:#fef08a;">${state.platformStats.monthlyRides}<span style="font-size:0.7rem;"> 件</span></strong>
+          </div>
+          <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">定刻運行率</span>
+            <strong style="font-size:1.15rem; color:#bbf7d0;">${state.platformStats.onTimeRate}<span style="font-size:0.7rem;">%</span></strong>
+          </div>
+          <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">総合満足度</span>
+            <strong style="font-size:1.15rem; color:#fde047;">★ ${state.platformStats.averageRating}</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 管理タブナビゲーション -->
+      <div style="display:flex; border-bottom:1px solid #cbd5e1; margin-bottom:16px; background:white; border-radius:8px; overflow:hidden; box-shadow:var(--shadow-sm);">
+        <div style="${getTabStyle('ranking')}" onclick="setAdminTab('ranking')">
+          <i class="ph-fill ph-trophy"></i> 稼働・評価ランキング
+        </div>
+        <div style="${getTabStyle('users')}" onclick="setAdminTab('users')">
+          <i class="ph-fill ph-users-three"></i> 全登録者台帳
+        </div>
+        <div style="${getTabStyle('vehicles')}" onclick="setAdminTab('vehicles')">
+          <i class="ph-fill ph-car"></i> 車両・運行日報
+        </div>
+        <div style="${getTabStyle('compliance')}" onclick="setAdminTab('compliance')">
+          <i class="ph-fill ph-shield-check"></i> 実費監査
+        </div>
+      </div>
+
+      <!-- アクティブタブのコンテンツ表示 -->
+      ${tabContentHtml}
+
+      <div style="text-align:center; margin-top:20px;">
+        <button class="btn btn-outline" onclick="navigate('dashboard')" style="width: auto; padding: 8px 24px; font-size:0.85rem;">
+          <i class="ph ph-arrow-left"></i> 一般ユーザー画面へ戻る
         </button>
       </div>
-
-      <div style="text-align:center;">
-        <button class="btn btn-outline" onclick="navigate('login')" style="width: auto; padding: 8px 24px;">ログイン画面へ戻る</button>
-      </div>
     </main>
+    ${renderBottomNav()}
   `;
 }
 
@@ -2468,14 +3571,37 @@ function DriverVerificationView() {
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:24px;">
-        <h3 style="color:var(--primary); margin-top:0; font-size:1.1rem;">自撮り写真（プロフィール用）</h3>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px; line-height:1.5;">保護者の方に安心いただくため、お顔がはっきりわかる写真をご登録ください。</p>
-        
-        <div style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 32px 16px; text-align: center; background: #f8fafc; cursor:pointer;" onclick="alert('デバイスのカメラが起動します（プロトタイプ）')">
-          <i class="ph ph-user-portrait" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 8px;"></i>
+      <div class="card" style="margin-bottom:24px; border:2px solid var(--primary); background:#fffdfa;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="color:var(--primary); margin:0; font-size:1.05rem; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-car"></i> 車送迎希望者：車両情報・車検証・保険証券
+          </h3>
+          <span style="font-size:0.7rem; background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:4px; font-weight:700;">車送迎のみ必須</span>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.45;">
+          自家用車（車・バイク）での送迎を担当される方は、道路運送法および児童安全基準に基づき、車検証および対人対物無制限の任意保険証券の提出が義務付けられています。
+        </p>
+
+        <!-- 車検証アップロード -->
+        <div style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px 16px; text-align: center; background: white; cursor:pointer; margin-bottom:12px;" onclick="alert('車検証の撮影・アップロードが起動します（プロトタイプ）')">
+          <i class="ph ph-article" style="font-size: 2rem; color: #94a3b8; margin-bottom: 4px;"></i>
           <br>
-          <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">顔写真を撮影</span>
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">自動車検査証（車検証）を撮影または選択</span>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">有効期限が確認できる鮮明な画像を添付してください</div>
+        </div>
+
+        <!-- 任意保険証券アップロード -->
+        <div style="border: 2px dashed #cbd5e1; border-radius: 8px; padding: 20px 16px; text-align: center; background: white; cursor:pointer; margin-bottom:12px;" onclick="alert('任意保険証券の撮影・アップロードが起動します（プロトタイプ）')">
+          <i class="ph ph-shield-check" style="font-size: 2rem; color: #94a3b8; margin-bottom: 4px;"></i>
+          <br>
+          <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">任意保険証券（対人対物無制限）を撮影または選択</span>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">保険会社名・証券番号・搭乗者補償が明記されたもの</div>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px; font-size:0.75rem; color:#475569;">
+          <div style="margin-bottom:4px;"><strong>【安全装備・点検義務】</strong></div>
+          ・幼児同乗時は <strong>ECE R44/04 または R129適合チャイルドシート</strong> の常設が必要です。<br>
+          ・毎運行前に <strong>出庫前日常点検</strong> および <strong>アルコール検査（0.00mg/L）</strong> の記録が義務化されます。
         </div>
       </div>
 
@@ -2612,6 +3738,32 @@ function DriverDashboardView() {
     `;
   }
 
+  const v = state.driverVehicle;
+  const transportRowsHtml = (state.transportRecords || []).map(r => `
+    <tr style="border-bottom:1px solid #f1f5f9; font-size:0.75rem;">
+      <td style="padding:10px 8px; font-weight:700; color:var(--text-main); white-space:nowrap;">
+        ${r.date}<br><span style="font-weight:400; color:var(--text-muted); font-size:0.7rem;">${r.timeSlot.split(' ')[0]} (${r.type})</span>
+      </td>
+      <td style="padding:10px 8px;">
+        <strong style="color:var(--primary); display:block;">${r.childName}</strong>
+        <span style="color:var(--text-muted); font-size:0.7rem;">${r.departure.split(' ')[0]} → ${r.destination.split(' ')[0]}</span>
+      </td>
+      <td style="padding:10px 8px; text-align:right; white-space:nowrap;">
+        <strong>${r.distanceKm} km</strong><br>
+        <span style="color:var(--secondary); font-weight:700;">¥${r.actualCost}</span>
+      </td>
+      <td style="padding:10px 8px; text-align:center;">
+        <span style="background:#def7ec; color:#03543f; padding:2px 6px; border-radius:4px; font-size:0.68rem; font-weight:700; white-space:nowrap;">${r.status}</span>
+        <div style="font-size:0.65rem; color:#15803d; margin-top:2px;">Alc: 0.00</div>
+      </td>
+      <td style="padding:10px 8px; text-align:center;">
+        <button class="btn btn-outline" style="padding:4px 8px; font-size:0.7rem; width:auto; border-color:var(--primary); color:var(--primary);" onclick="showTransportRecordModal('${r.recordId}')">
+          詳細
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
   return `
     ${renderHeader('【送迎者用】稼働・精算ダッシュボード')}
     <main class="fade-in" style="padding-bottom:80px; padding-top:20px;">
@@ -2625,6 +3777,99 @@ function DriverDashboardView() {
         </div>
         <div>
           <span style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:16px; font-size:0.8rem; font-weight:700;">受託可能</span>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- 登録車両情報 ＆ 安全装備ステータス カード（行政監査・運輸支局適合） -->
+      <!-- ===================================================================== -->
+      <div class="card" style="margin-bottom:20px; border-top:4px solid var(--primary); padding:16px; box-shadow:var(--shadow-md);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+          <div>
+            <span style="font-size:0.7rem; background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:4px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+              <i class="ph-fill ph-check-circle"></i> 国交省・道路運送法基準適合 車両
+            </span>
+            <h3 style="margin:6px 0 0 0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-car" style="color:var(--primary);"></i> 登録車両情報
+            </h3>
+          </div>
+          <button class="btn btn-outline" style="padding:4px 10px; font-size:0.75rem; border-color:var(--primary); color:var(--primary); width:auto;" onclick="showVehicleEditModal()">
+            <i class="ph ph-note-pencil"></i> 車両情報変更
+          </button>
+        </div>
+
+        <!-- ナンバープレート風デザインバッジ ＆ 車種概要 -->
+        <div style="display:flex; gap:12px; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:12px;">
+          <div style="background:white; border:2px solid #334155; border-radius:6px; padding:6px 10px; text-align:center; box-shadow:var(--shadow-sm); min-width:110px;">
+            <div style="font-size:0.65rem; color:#475569; font-weight:700; border-bottom:1px solid #cbd5e1; padding-bottom:2px; margin-bottom:2px;">自家用自動車</div>
+            <div style="font-size:0.95rem; font-weight:800; color:#0f172a; letter-spacing:1px; white-space:nowrap;">${v.plateNumber}</div>
+          </div>
+          <div style="flex:1;">
+            <strong style="font-size:0.95rem; color:var(--text-main); display:block;">${v.model}</strong>
+            <span style="font-size:0.75rem; color:var(--text-muted);">${v.color} / ${v.capacity}</span>
+          </div>
+        </div>
+
+        <!-- 法定・安全検査ステータス グリッド -->
+        <div style="display:grid; grid-template-columns: 1fr; gap:8px; font-size:0.75rem; margin-bottom:12px;">
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--text-muted); font-weight:600;"><i class="ph ph-certificate" style="margin-right:4px; color:var(--primary);"></i>車検証 有効期間:</span>
+            <strong style="color:#15803d; background:#f0fdf4; padding:2px 6px; border-radius:4px;">${v.shakenExpiry}</strong>
+          </div>
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--text-muted); font-weight:600;"><i class="ph ph-shield-check" style="margin-right:4px; color:var(--primary);"></i>任意保険加入:</span>
+            <strong style="color:var(--text-main);">${v.voluntaryInsurance}</strong>
+          </div>
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:0.72rem; color:#334155; line-height:1.4;">
+            <span style="color:var(--text-muted); font-weight:600; display:block; margin-bottom:2px;">補償内容:</span>
+            ${v.insuranceCoverage}
+          </div>
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--text-muted); font-weight:600;"><i class="ph ph-baby" style="margin-right:4px; color:var(--primary);"></i>チャイルドシート:</span>
+            <strong style="color:#0369a1; background:#e0f2fe; padding:2px 6px; border-radius:4px; font-size:0.7rem;">ECE R129安全基準適合</strong>
+          </div>
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--text-muted); font-weight:600;"><i class="ph ph-video-camera" style="margin-right:4px; color:var(--primary);"></i>ドライブレコーダー:</span>
+            <strong style="color:#15803d;">前後2カメラ クラウド常時録画</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- 輸送記録（運行日報・走行ログ一覧：行政提示・監査対応） -->
+      <!-- ===================================================================== -->
+      <div class="card" style="margin-bottom:24px; padding:16px; border-top:4px solid var(--secondary); box-shadow:var(--shadow-md);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-clipboard-text" style="color:var(--secondary);"></i> 輸送記録（運行日報）
+            </h3>
+            <span style="font-size:0.72rem; color:var(--text-muted);">道路運送法準拠・実費精算監査ログ</span>
+          </div>
+          <button class="btn btn-primary" style="padding:6px 10px; font-size:0.75rem; width:auto; display:flex; align-items:center; gap:4px;" onclick="exportTransportRecordsCSV()">
+            <i class="ph ph-file-csv"></i> 運行日報CSV出力
+          </button>
+        </div>
+
+        <div style="overflow-x:auto; margin-bottom:10px; border:1px solid #e2e8f0; border-radius:8px;">
+          <table style="width:100%; border-collapse:collapse; text-align:left;">
+            <thead>
+              <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; font-size:0.72rem; color:var(--text-muted);">
+                <th style="padding:8px;">運行日時</th>
+                <th style="padding:8px;">送迎児童・区間</th>
+                <th style="padding:8px; text-align:right;">実走行/実費</th>
+                <th style="padding:8px; text-align:center;">状態/点検</th>
+                <th style="padding:8px; text-align:center;">詳細</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${transportRowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        <div style="font-size:0.7rem; color:var(--text-muted); background:#f8fafc; padding:8px 10px; border-radius:6px; border:1px solid #e2e8f0;">
+          ※各運行は<strong>出庫前アルコール検査（0.00mg/L）</strong>・<strong>日常点検</strong>・<strong>GPS全測位ログ</strong>の記録保管が完了しています。白タク行為防止のため利益はゼロ、公認ガソリン単価（11円/km）による実費のみが精算されます。
         </div>
       </div>
 
@@ -2721,17 +3966,6 @@ function DriverDashboardView() {
             }).join('')}
             ${Array(5).fill(0).map(() => `<div class="calendar-day muted"></div>`).join('')}
           </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:24px;">
-        <h3 style="margin-top:0; font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">実費振込先口座の設定</h3>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px;">
-          <div style="font-size:0.9rem;">
-            <div style="font-weight:600;">三菱UFJ銀行</div>
-            <div style="color:var(--text-muted);">普通 123****</div>
-          </div>
-          <button class="btn btn-outline" style="width:auto; padding:6px 16px; font-size:0.8rem;" onclick="alert('口座情報の編集画面が立ち上がります')">変更</button>
         </div>
       </div>
     </main>
