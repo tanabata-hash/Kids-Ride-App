@@ -340,6 +340,7 @@ const state = {
   // 管理者ポータル管理状態
   isAdminAuthenticated: !!localStorage.getItem('kidsride_admin_token'),
   currentAdmin: JSON.parse(localStorage.getItem('kidsride_admin_user') || 'null'),
+  pendingAdminLogin: null, // 2FA認証コード待ちの一時保持用
   adminAuthTab: 'login', // 'login' | 'register'
   adminAccounts: JSON.parse(localStorage.getItem('kidsride_admin_accounts') || 'null') || [
     {
@@ -351,10 +352,23 @@ const state = {
       createdAt: '2026-01-01 09:00'
     }
   ],
-  adminTab: 'ranking', // 'ranking' | 'users' | 'vehicles' | 'compliance'
+  adminTab: 'ranking', // 'ranking' | 'users' | 'vehicles' | 'compliance' | 'audit'
   adminUserFilter: 'all', // 'all' | 'driver' | 'parent' | 'both' | 'pending'
   adminUserSearch: '',
   adminSortKey: 'rating', // 'rating' | 'rides' | 'utilization'
+  // 監査ログ（操作・閲覧履歴）
+  auditLogs: JSON.parse(localStorage.getItem('kidsride_audit_logs') || 'null') || [
+    { id: 'LOG-004', timestamp: '2026-09-28 11:25:10', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'UPDATE_CONFIG', target: '公認ガソリン実費単価', ip: '192.168.1.104 (セキュアオフィス回線)', details: '公認実費単価を175円/Lから180円/Lへ改訂' },
+    { id: 'LOG-003', timestamp: '2026-09-28 11:24:02', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'EXPORT_CSV', target: '輸送記録（運行日報）', ip: '192.168.1.104 (セキュアオフィス回線)', details: '東京運輸支局提出用の全運行日報CSVをエクスポート' },
+    { id: 'LOG-002', timestamp: '2026-09-28 11:22:40', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'VIEW_USER', target: '佐藤 カズヤ (d_kazuya)', ip: '192.168.1.104 (セキュアオフィス回線)', details: '登録車両・保険証券番号および本人確認書類を閲覧' },
+    { id: 'LOG-001', timestamp: '2026-09-28 11:20:15', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'EXPORT_CSV', target: '全登録者台帳', ip: '192.168.1.104 (セキュアオフィス回線)', details: '全158名の登録者台帳CSVファイルをエクスポート' }
+  ],
+  adminSecuritySettings: {
+    twoFactorEnabled: true,
+    ipRestricted: true,
+    allowedIpRange: '192.168.1.0/24 (オフィスVPN/指定回線)',
+    currentIp: '192.168.1.104 (認証済回線)'
+  },
   // プラットフォーム全体 KPI サマリー
   platformStats: {
     totalUsers: 158,
@@ -1155,6 +1169,117 @@ function AuthLoginView() {
   `;
 }
 
+// ==========================================
+// 利用規約・プライバシーポリシー・特商法 モーダル機能（法務・安全運行管理明記）
+// ==========================================
+window.showTermsModal = function() {
+  const existing = document.getElementById('terms-modal');
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div id="terms-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:540px; max-height:85vh; border-radius:16px; box-shadow:var(--shadow-xl); display:flex; flex-direction:column; overflow:hidden;">
+        <div style="background:var(--primary); color:white; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-size:1.1rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-file-text"></i> KidsRide 利用規約
+          </h3>
+          <button onclick="document.getElementById('terms-modal').remove()" style="background:none; border:none; color:white; font-size:1.4rem; cursor:pointer;">×</button>
+        </div>
+        <div style="padding:20px; overflow-y:auto; font-size:0.85rem; line-height:1.7; color:#334155;">
+          <h4 style="color:#0f172a; margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第1条（目的および基本理念）</h4>
+          <p>本規約は、KidsRide運営事務局（以下「運営者」）が提供する保護者間相互送迎代行プラットフォーム「KidsRide」（以下「本サービス」）の利用条件を定めるものです。本サービスは、地域共助および保護者同士の相互扶助の精神に基づき、安全で安心な子ども送迎支援を実現することを目的とします。</p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第2条（道路運送法第78条に基づく実費精算の遵守）</h4>
+          <p>本サービスにおける車両送迎に伴う謝礼・対価は、道路運送法第78条および国土交通省「自家用車による有償運送ハンドライン」に適合する範囲内（ガソリン代実費相当額のみ）に限定されます。営利を目的とした運賃収受は固く禁止されており、精算額は法令上限に基づき端数切り捨て（Math.floor）にて厳格に算定されます。</p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px; background:#eff6ff; padding:8px 10px; border-left:4px solid var(--primary); border-radius:4px;">第3条（運営管理者による情報の一元管理および行政・監査機関への協力）</h4>
+          <p style="font-weight:700; color:#1e3a8a; margin:0 0 6px 0;">
+            【重要】運営管理者は、本サービスの安全運行管理、道路運送法および関係法令の遵守、児童の安全確保（誤認引き渡し防止・事故防止）、ならびに行政機関（国土交通省、運輸支局、警察、消防等）への監査・報告協力の目的において、利用者の登録情報、車両情報（車検証・自賠責・任意保険証券番号・車検満了日）、輸送記録・運行日報（アルコール検知結果・日常点検結果を含む）、およびGPS測位ログを一元管理・閲覧・記録・保存し、法令に基づき必要と認められる範囲において開示できるものとします。
+          </p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第4条（安全配慮義務と車両・点検要件）</h4>
+          <p>送迎を行う利用者は、道路運送車両法に基づく日常点検を運行前に必ず実施し、出庫前アルコール検査において検知0.00mg/Lを確認しなければなりません。また、法令で定められた安全基準（ECE R129適合チャイルドシート、対人対物無制限の任意保険加入）を満たす車両のみを使用するものとします。</p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第5条（個人情報の厳重な保護）</h4>
+          <p>運営者は、お預かりした児童情報および保護者情報を「個人情報保護法」および当サービスのプライバシーポリシーに基づき、アクセス権限の厳格な分離、2段階認証（2FA）、監査ログの記録等を通じ、漏洩・滅失の防止に万全の安全管理措置を講じます。</p>
+        </div>
+        <div style="padding:12px 20px; border-top:1px solid #e2e8f0; background:#f8fafc; text-align:right;">
+          <button onclick="document.getElementById('terms-modal').remove()" class="btn btn-primary" style="width:auto; padding:8px 24px;">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.showPrivacyModal = function() {
+  const existing = document.getElementById('privacy-modal');
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div id="privacy-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:540px; max-height:85vh; border-radius:16px; box-shadow:var(--shadow-xl); display:flex; flex-direction:column; overflow:hidden;">
+        <div style="background:linear-gradient(135deg, #0284c7, #1e3a8a); color:white; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-size:1.1rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-shield-check"></i> KidsRide プライバシーポリシー
+          </h3>
+          <button onclick="document.getElementById('privacy-modal').remove()" style="background:none; border:none; color:white; font-size:1.4rem; cursor:pointer;">×</button>
+        </div>
+        <div style="padding:20px; overflow-y:auto; font-size:0.85rem; line-height:1.7; color:#334155;">
+          <h4 style="color:#0f172a; margin-top:0; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第1条（個人情報の適切な取得）</h4>
+          <p>当サービスは、安全な子ども送迎サービスを提供するため、保護者氏名、連絡先、居住地域、お子様の氏名・年齢・所属施設、および送迎協力者の車両情報・免許証・保険情報を適法かつ公正な手段によって取得します。</p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px; background:#eff6ff; padding:8px 10px; border-left:4px solid var(--primary); border-radius:4px;">第2条（個人情報の利用目的および運営管理監査の明記）</h4>
+          <p style="font-weight:700; color:#1e3a8a; margin:0 0 6px 0;">
+            【重要】当サービスにおいて、運営管理者は、安全運行管理、道路運送法に基づく運行日報の作成・保存、ガソリン代実費精算の適法性監査、緊急時の安全確保、および行政機関（国土交通省、運輸支局、警察等）への監査・照会協力の目的において、登録情報・車両情報・運行日報・GPS測位ログを一元管理・閲覧・記録・保存します。
+          </p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第3条（安全管理措置）</h4>
+          <p>個人情報保護法第23条に基づき、登録者情報へのアクセスは運営統括管理者に限定し、一般画面からの非公開化、2段階認証（2FA）、暗号化通信（SSL/TLS）、および管理者による閲覧・CSV出力の操作履歴（監査ログ）の完全な保存を実施しております。</p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第4条（第三者提供の制限）</h4>
+          <p>法令に基づく要請（道路運送法に基づく運輸支局の監査、警察・児童相談所からの緊急照会等）を除き、利用者の事前同意なく個人情報を第三者へ提供することはありません。</p>
+        </div>
+        <div style="padding:12px 20px; border-top:1px solid #e2e8f0; background:#f8fafc; text-align:right;">
+          <button onclick="document.getElementById('privacy-modal').remove()" class="btn btn-primary" style="width:auto; padding:8px 24px;">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.showTokushoModal = function() {
+  const existing = document.getElementById('tokusho-modal');
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div id="tokusho-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:540px; max-height:85vh; border-radius:16px; box-shadow:var(--shadow-xl); display:flex; flex-direction:column; overflow:hidden;">
+        <div style="background:#1e293b; color:white; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-size:1.1rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-scales"></i> 特定商取引法に基づく表記
+          </h3>
+          <button onclick="document.getElementById('tokusho-modal').remove()" style="background:none; border:none; color:white; font-size:1.4rem; cursor:pointer;">×</button>
+        </div>
+        <div style="padding:20px; overflow-y:auto; font-size:0.85rem; line-height:1.7; color:#334155;">
+          <table style="width:100%; border-collapse:collapse;">
+            <tr style="border-bottom:1px solid #e2e8f0;"><th style="text-align:left; padding:8px 4px; width:35%; color:#64748b;">運営事業者</th><td style="padding:8px 4px; font-weight:600;">KidsRide 運営事務局</td></tr>
+            <tr style="border-bottom:1px solid #e2e8f0;"><th style="text-align:left; padding:8px 4px; color:#64748b;">対価・実費の性質</th><td style="padding:8px 4px;">道路運送法第78条に基づくガソリン代実費のみ（営利性なし）</td></tr>
+            <tr style="border-bottom:1px solid #e2e8f0;"><th style="text-align:left; padding:8px 4px; color:#64748b;">実費単価</th><td style="padding:8px 4px;">公認実費単価：12円/km（燃費15km/L、ガソリン公認単価180円/L基準、切捨て算定）</td></tr>
+            <tr style="border-bottom:1px solid #e2e8f0;"><th style="text-align:left; padding:8px 4px; color:#64748b;">支払時期・方法</th><td style="padding:8px 4px;">送迎完了時、登録クレジットカード等による実費自動精算</td></tr>
+            <tr><th style="text-align:left; padding:8px 4px; color:#64748b;">監査・運行記録</th><td style="padding:8px 4px;">全輸送記録・点検記録を行政・運輸支局基準に準拠して保存</td></tr>
+          </table>
+        </div>
+        <div style="padding:12px 20px; border-top:1px solid #e2e8f0; background:#f8fafc; text-align:right;">
+          <button onclick="document.getElementById('tokusho-modal').remove()" class="btn btn-primary" style="width:auto; padding:8px 24px;">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
 window.previewImage = function(event) {
   const reader = new FileReader();
   reader.onload = function(){
@@ -1280,10 +1405,14 @@ function RegisterView() {
             <option value="both">両方（保護者・送迎者）</option>
           </select>
         </div>
-        <div style="margin-top:16px; margin-bottom:16px; font-size:0.75rem; text-align:center; color:var(--text-muted); line-height:1.5;">
-          ご登録により、当サービスの<a href="#" onclick="alert('別途準備した「利用規約」ファイルの内容が表示されます')" style="color:var(--primary); text-decoration:underline;">利用規約</a>、
-          <a href="#" onclick="alert('別途準備した「プライバシーポリシー」ファイルの内容が表示されます')" style="color:var(--primary); text-decoration:underline;">プライバシーポリシー</a>、<br>
-          <a href="#" onclick="alert('別途準備した「特定商取引法に基づく表記」ファイルの内容が表示されます')" style="color:var(--primary); text-decoration:underline;">特定商取引法に基づく表記</a> に同意したものとみなされます。
+        <div style="margin-top:16px; margin-bottom:16px; font-size:0.75rem; text-align:center; color:var(--text-muted); line-height:1.6; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+          <div style="font-weight:700; color:#1e293b; margin-bottom:4px;">
+            <i class="ph-fill ph-shield-check" style="color:var(--primary);"></i> 安全運行・コンプライアンス管理に関する同意
+          </div>
+          ご登録により、当サービスの<a href="javascript:void(0)" onclick="showTermsModal()" style="color:var(--primary); font-weight:700; text-decoration:underline;">利用規約</a>、
+          <a href="javascript:void(0)" onclick="showPrivacyModal()" style="color:var(--primary); font-weight:700; text-decoration:underline;">プライバシーポリシー</a>、
+          <a href="javascript:void(0)" onclick="showTokushoModal()" style="color:var(--primary); font-weight:700; text-decoration:underline;">特定商取引法に基づく表記</a> に同意したものとみなされます。<br>
+          <span style="font-size:0.7rem; color:#64748b;">※運営管理者は、安全運行管理・法令遵守・行政（運輸支局等）への監査協力の目的で、登録情報・車両情報・運行日報・GPSログを一元管理・閲覧・記録します。</span>
         </div>
 
         <button type="submit" class="btn btn-primary">上記に同意して登録する</button>
@@ -2632,13 +2761,117 @@ window.exportTransportRecordsCSV = function() {
   link.click();
 };
 
+// ==========================================
+// 管理者セキュリティ & 監査ログ機能（個人情報保護・安全管理措置準拠）
+// ==========================================
+
+// 監査ログの自動記録関数
+window.logAdminAuditAction = function(action, target, details) {
+  const currentAdmin = state.currentAdmin || { adminId: 'system', name: 'システム自動処理' };
+  const newLog = {
+    id: `LOG-${String((state.auditLogs?.length || 0) + 1).padStart(3, '0')}`,
+    timestamp: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    adminId: currentAdmin.adminId,
+    adminName: currentAdmin.name,
+    action: action,
+    target: target,
+    ip: state.adminSecuritySettings?.currentIp || '192.168.1.104 (認証済回線)',
+    details: details
+  };
+  state.auditLogs = [newLog, ...(state.auditLogs || [])];
+  localStorage.setItem('kidsride_audit_logs', JSON.stringify(state.auditLogs));
+};
+
+// 監査ログCSVエクスポート
+window.exportAuditLogsCSV = function() {
+  const logs = state.auditLogs || [];
+  let csv = 'ログID,記録日時,実行管理者ID,実行管理者氏名,操作種別,操作対象,接続元IP/回線,詳細内容\n';
+  logs.forEach(l => {
+    csv += `"${l.id}","${l.timestamp}","${l.adminId}","${l.adminName}","${l.action}","${l.target}","${l.ip}","${l.details}"\n`;
+  });
+  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `KidsRide_管理者操作監査ログ_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  window.logAdminAuditAction('EXPORT_CSV', '管理者操作監査ログ', '全監査ログCSVをエクスポート');
+};
+
+// 管理者パスワード変更モーダル
+window.showAdminPasswordChangeModal = function() {
+  const existing = document.getElementById('admin-password-modal');
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div id="admin-password-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.6); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:420px; border-radius:16px; box-shadow:var(--shadow-xl); overflow:hidden;">
+        <div style="background:linear-gradient(135deg, #0f172a, #1e3a8a); color:white; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0; font-size:1.05rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+            <i class="ph-bold ph-key"></i> 管理者パスワードの変更
+          </h3>
+          <button onclick="document.getElementById('admin-password-modal').remove()" style="background:none; border:none; color:#cbd5e1; font-size:1.3rem; cursor:pointer;">×</button>
+        </div>
+        <form onsubmit="handleAdminPasswordChange(event)" style="padding:20px;">
+          <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-size:0.8rem; font-weight:700; color:#334155;">現在のパスワード</label>
+            <input type="password" id="current-admin-pass" class="form-control" placeholder="現在のパスワード" required>
+          </div>
+          <div class="form-group" style="margin-bottom:14px;">
+            <label style="font-size:0.8rem; font-weight:700; color:#334155;">新しいパスワード (8文字以上・英数推奨)</label>
+            <input type="password" id="new-admin-pass" class="form-control" placeholder="8文字以上の強固なパスワード" minlength="8" required>
+          </div>
+          <div class="form-group" style="margin-bottom:20px;">
+            <label style="font-size:0.8rem; font-weight:700; color:#334155;">新しいパスワード (確認再入力)</label>
+            <input type="password" id="confirm-admin-pass" class="form-control" placeholder="確認のため再入力" minlength="8" required>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="button" onclick="document.getElementById('admin-password-modal').remove()" class="btn btn-outline" style="flex:1;">キャンセル</button>
+            <button type="submit" class="btn btn-primary" style="flex:1;">パスワード更新</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// パスワード変更処理
+window.handleAdminPasswordChange = function(event) {
+  event.preventDefault();
+  const currentPass = document.getElementById('current-admin-pass').value.trim();
+  const newPass = document.getElementById('new-admin-pass').value.trim();
+  const confirmPass = document.getElementById('confirm-admin-pass').value.trim();
+
+  if (newPass !== confirmPass) {
+    window.showCustomAlert('エラー', '新しいパスワードが一致しません。');
+    return;
+  }
+  if (newPass.length < 8) {
+    window.showCustomAlert('エラー', 'セキュリティ強化のため、8文字以上のパスワードを指定してください。');
+    return;
+  }
+
+  const account = (state.adminAccounts || []).find(a => a.adminId === state.currentAdmin.adminId);
+  if (!account || account.password !== currentPass) {
+    window.showCustomAlert('認証エラー', '現在のパスワードが正しくありません。');
+    return;
+  }
+
+  account.password = newPass;
+  localStorage.setItem('kidsride_admin_accounts', JSON.stringify(state.adminAccounts));
+  document.getElementById('admin-password-modal').remove();
+  window.logAdminAuditAction('CHANGE_PASSWORD', state.currentAdmin.name, '管理者パスワードを強固なパスワードへ変更完了');
+  window.showCustomAlert('パスワード変更完了', '管理者パスワードを正常に変更・更新しました。\n次回のログインより新しいパスワードをご利用ください。');
+  render();
+};
+
 // 管理者ポータル：認証タブ切り替え（ログイン / 新規登録）
 window.setAdminAuthTab = function(tab) {
   state.adminAuthTab = tab;
   render();
 };
 
-// 管理者ポータル：専用ログイン処理
+// 管理者ポータル：専用ログイン処理（第1段階：ID/PW照合 → 第2段階：2FAコード要求）
 window.handleAdminLogin = function(event) {
   if (event) event.preventDefault();
   const idInput = document.getElementById('admin-login-id');
@@ -2653,15 +2886,78 @@ window.handleAdminLogin = function(event) {
 
   const account = (state.adminAccounts || []).find(a => (a.adminId.toLowerCase() === adminId.toLowerCase() || a.email.toLowerCase() === adminId.toLowerCase()) && a.password === password);
   if (account) {
-    state.isAdminAuthenticated = true;
-    state.currentAdmin = account;
-    localStorage.setItem('kidsride_admin_token', 'true');
-    localStorage.setItem('kidsride_admin_user', JSON.stringify(account));
-    window.showCustomAlert('管理者認証成功', `KidsRide 統括管理ポータルへようこそ、${account.name} 様。`);
-    render();
+    // 2段階認証 (2FA) ステップへ移行
+    state.pendingAdminLogin = account;
+    window.showAdmin2FAModal(account);
   } else {
     window.showCustomAlert('認証エラー', '管理者IDまたはパスワードが一致しません。\n（※初期デモ管理者ID: admin / パスワード: kidsride2026）');
   }
+};
+
+// 2段階認証 (2FA) モーダル表示
+window.showAdmin2FAModal = function(account) {
+  const existing = document.getElementById('admin-2fa-modal');
+  if (existing) existing.remove();
+
+  // ワンタイム認証コード（シミュレーション生成）
+  const twoFactorCode = '782910';
+  window._current2FACode = twoFactorCode;
+
+  const modalHtml = `
+    <div id="admin-2fa-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.7); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div style="background:white; width:100%; max-width:400px; border-radius:16px; box-shadow:var(--shadow-xl); overflow:hidden; text-align:center;">
+        <div style="background:linear-gradient(135deg, #0284c7, #1e3a8a); color:white; padding:20px;">
+          <div style="width:50px; height:50px; border-radius:50%; background:rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; font-size:1.6rem;">
+            <i class="ph-bold ph-shield-check"></i>
+          </div>
+          <h3 style="margin:0 0 4px 0; font-size:1.15rem; font-weight:800;">2段階認証 (2FA)</h3>
+          <p style="margin:0; font-size:0.75rem; opacity:0.9;">管理者セキュリティ認証</p>
+        </div>
+        <form onsubmit="verifyAdmin2FACode(event)" style="padding:24px 20px;">
+          <p style="font-size:0.82rem; color:#475569; margin:0 0 16px 0; line-height:1.5;">
+            ご登録の管理者連絡先（${account.email}）へ送信された<strong>6桁のセキュリティ確認コード</strong>を入力してください。
+          </p>
+
+          <div style="background:#f1f5f9; padding:8px 12px; border-radius:8px; margin-bottom:16px; font-size:0.75rem; color:#0369a1; border:1px solid #bae6fd;">
+            <i class="ph-fill ph-info"></i> <strong>デモ用送信確認コード:</strong> <span style="font-size:1.1rem; font-weight:800; letter-spacing:3px; color:#0284c7;">${twoFactorCode}</span>
+          </div>
+
+          <div class="form-group" style="margin-bottom:20px;">
+            <input type="text" id="admin-2fa-input" class="form-control" placeholder="6桁のコードを入力" value="${twoFactorCode}" maxlength="6" style="text-align:center; font-size:1.4rem; font-weight:800; letter-spacing:6px; padding:10px;" required>
+          </div>
+
+          <div style="display:flex; gap:10px;">
+            <button type="button" onclick="document.getElementById('admin-2fa-modal').remove()" class="btn btn-outline" style="flex:1;">戻る</button>
+            <button type="submit" class="btn btn-primary" style="flex:1.5; font-weight:700;">認証してログイン</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+// 2FAコード検証処理
+window.verifyAdmin2FACode = function(event) {
+  event.preventDefault();
+  const inputCode = (document.getElementById('admin-2fa-input')?.value || '').trim();
+  if (inputCode !== window._current2FACode) {
+    window.showCustomAlert('認証失敗', 'セキュリティ確認コードが一致しません。');
+    return;
+  }
+
+  const account = state.pendingAdminLogin;
+  document.getElementById('admin-2fa-modal').remove();
+
+  state.isAdminAuthenticated = true;
+  state.currentAdmin = account;
+  state.pendingAdminLogin = null;
+  localStorage.setItem('kidsride_admin_token', 'true');
+  localStorage.setItem('kidsride_admin_user', JSON.stringify(account));
+
+  window.logAdminAuditAction('LOGIN', account.name, '2段階認証 (2FA) 完了により管理者ポータルへログイン');
+  window.showCustomAlert('2段階認証 成功', `セキュリティ確認が完了しました。\nKidsRide 統括管理ポータルへようこそ、${account.name} 様。`);
+  render();
 };
 
 // 管理者ポータル：専用アカウント新規登録処理
@@ -2709,12 +3005,15 @@ window.handleAdminRegister = function(event) {
   localStorage.setItem('kidsride_admin_token', 'true');
   localStorage.setItem('kidsride_admin_user', JSON.stringify(newAdmin));
 
+  window.logAdminAuditAction('REGISTER_ADMIN', newAdmin.name, `新規管理者アカウント発行・登録 (ID: ${adminId})`);
   window.showCustomAlert('管理者登録完了', `管理者アカウント（${adminId}）を新規発行・登録しました！\n統括管理ポータルにログインしました。`);
   render();
 };
 
 // 管理者ポータル：ログアウト処理
 window.handleAdminLogout = function() {
+  const adminName = state.currentAdmin?.name || '管理者';
+  window.logAdminAuditAction('LOGOUT', adminName, '管理者ポータルからログアウト');
   state.isAdminAuthenticated = false;
   state.currentAdmin = null;
   localStorage.removeItem('kidsride_admin_token');
@@ -2764,6 +3063,7 @@ window.exportAllRegistrantsCSV = function() {
   link.href = URL.createObjectURL(blob);
   link.download = `KidsRide_全登録者台帳_${new Date().toISOString().slice(0,10)}.csv`;
   link.click();
+  window.logAdminAuditAction('EXPORT_CSV', '全登録者台帳', '全登録者台帳（氏名・連絡先・車両・児童情報含む）CSVエクスポート');
 };
 
 // 管理者ポータル：登録者詳細モーダル
@@ -2773,6 +3073,8 @@ window.showUserDetailModal = function(userId) {
 
   const u = (state.allRegistrants || []).find(item => item.id === userId);
   if (!u) return;
+
+  window.logAdminAuditAction('VIEW_USER', `${u.name} (${u.id})`, '登録者の詳細台帳（児童情報・連絡先・車両・保険証券番号）を閲覧');
 
   const childrenHtml = (u.children || []).length > 0 ? (u.children || []).map(c => `
     <div style="background:white; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:0.8rem;">
@@ -3527,6 +3829,92 @@ function AdminView() {
     `;
   }
 
+  // ==========================================
+  // 【タブ5】操作・アクセス監査ログ（個人情報保護・安全管理措置準拠）
+  // ==========================================
+  else if (currentTab === 'audit') {
+    tabContentHtml = `
+      <div class="card" style="margin-bottom:20px; border-top:4px solid #0f172a; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px; flex-wrap:wrap; gap:8px;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-shield-check" style="color:#0f172a;"></i> 管理者操作・データアクセス監査ログ
+            </h3>
+            <span style="font-size:0.72rem; color:var(--text-muted);">個人情報保護法第23条（安全管理措置）準拠・登録者閲覧およびCSV出力の完全な証跡記録</span>
+          </div>
+          <button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem; width:auto; display:flex; align-items:center; gap:6px;" onclick="exportAuditLogsCSV()">
+            <i class="ph ph-file-csv"></i> 監査ログ(CSV)出力
+          </button>
+        </div>
+
+        <!-- セキュリティ環境インジケーター -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; font-size:0.75rem;">
+          <div>
+            <span style="color:#64748b; display:block;">アクセス保護体制:</span>
+            <strong style="color:#15803d;"><i class="ph-fill ph-check-circle"></i> 2段階認証 (2FA) 有効</strong>
+          </div>
+          <div>
+            <span style="color:#64748b; display:block;">接続制限・回線認証:</span>
+            <strong style="color:#0369a1;"><i class="ph-fill ph-lock-key"></i> ${state.adminSecuritySettings?.allowedIpRange || 'セキュア回線制限中'}</strong>
+          </div>
+          <div>
+            <span style="color:#64748b; display:block;">現在セッション接続元:</span>
+            <strong style="color:#334155;">${state.adminSecuritySettings?.currentIp || '192.168.1.104'}</strong>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:8px;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.72rem; text-align:left;">
+            <thead>
+              <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:var(--text-muted);">
+                <th style="padding:8px;">ログID / 記録日時</th>
+                <th style="padding:8px;">実行管理者</th>
+                <th style="padding:8px; text-align:center;">操作種別</th>
+                <th style="padding:8px;">操作対象データ</th>
+                <th style="padding:8px;">詳細内容 / 接続回線</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(state.auditLogs || []).map(l => `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:8px; white-space:nowrap;">
+                    <strong style="color:var(--text-main);">${l.id}</strong><br>
+                    <span style="color:var(--text-muted); font-size:0.68rem;">${l.timestamp}</span>
+                  </td>
+                  <td style="padding:8px; white-space:nowrap;">
+                    <strong>${l.adminName}</strong><br>
+                    <span style="color:var(--text-muted); font-size:0.68rem;">ID: ${l.adminId}</span>
+                  </td>
+                  <td style="padding:8px; text-align:center; white-space:nowrap;">
+                    <span style="padding:2px 8px; border-radius:4px; font-weight:700; font-size:0.68rem; ${
+                      l.action === 'EXPORT_CSV' ? 'background:#fee2e2; color:#991b1b;' :
+                      l.action === 'VIEW_USER' ? 'background:#e0f2fe; color:#0369a1;' :
+                      l.action === 'LOGIN' ? 'background:#dcfce7; color:#15803d;' :
+                      'background:#fef3c7; color:#92400e;'
+                    }">
+                      ${l.action === 'EXPORT_CSV' ? 'CSV出力' :
+                        l.action === 'VIEW_USER' ? '詳細閲覧' :
+                        l.action === 'LOGIN' ? '2FAログイン' :
+                        l.action === 'LOGOUT' ? 'ログアウト' :
+                        l.action === 'CHANGE_PASSWORD' ? 'PW変更' : l.action}
+                    </span>
+                  </td>
+                  <td style="padding:8px; font-weight:600; color:var(--text-main);">
+                    ${l.target}
+                  </td>
+                  <td style="padding:8px; color:#475569; font-size:0.7rem;">
+                    <div>${l.details}</div>
+                    <span style="color:#94a3b8; font-size:0.65rem;"><i class="ph ph-shield"></i> ${l.ip}</span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
   return `
     ${renderHeader('KidsRide 統括管理ポータル')}
     <main class="fade-in" style="padding-top:16px; padding-bottom:80px;">
@@ -3544,11 +3932,14 @@ function AdminView() {
               <span>担当管理者: <strong>${state.currentAdmin ? state.currentAdmin.name : '統括管理者'}</strong> <span style="opacity:0.85;">(${state.currentAdmin ? state.currentAdmin.role || state.currentAdmin.adminId : 'Super Admin'})</span></span>
             </div>
           </div>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn btn-outline" onclick="handleAdminLogout()" style="background:rgba(239,68,68,0.25); color:#fee2e2; border-color:rgba(254,202,202,0.4); padding:5px 12px; font-size:0.75rem; width:auto; display:flex; align-items:center; gap:4px;">
-              <i class="ph ph-sign-out"></i> 管理者ログアウト
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-outline" onclick="showAdminPasswordChangeModal()" style="background:rgba(255,255,255,0.18); color:white; border-color:white; padding:5px 10px; font-size:0.75rem; width:auto; display:flex; align-items:center; gap:4px;">
+              <i class="ph ph-key"></i> PW変更
             </button>
-            <button class="btn btn-outline" onclick="navigate('dashboard')" style="background:rgba(255,255,255,0.15); color:white; border-color:white; padding:5px 12px; font-size:0.75rem; width:auto;">
+            <button class="btn btn-outline" onclick="handleAdminLogout()" style="background:rgba(239,68,68,0.25); color:#fee2e2; border-color:rgba(254,202,202,0.4); padding:5px 10px; font-size:0.75rem; width:auto; display:flex; align-items:center; gap:4px;">
+              <i class="ph ph-sign-out"></i> ログアウト
+            </button>
+            <button class="btn btn-outline" onclick="navigate('dashboard')" style="background:rgba(255,255,255,0.15); color:white; border-color:white; padding:5px 10px; font-size:0.75rem; width:auto;">
               一般画面へ
             </button>
           </div>
@@ -3575,9 +3966,9 @@ function AdminView() {
       </div>
 
       <!-- 管理タブナビゲーション -->
-      <div style="display:flex; border-bottom:1px solid #cbd5e1; margin-bottom:16px; background:white; border-radius:8px; overflow:hidden; box-shadow:var(--shadow-sm);">
+      <div style="display:flex; border-bottom:1px solid #cbd5e1; margin-bottom:16px; background:white; border-radius:8px; overflow:hidden; box-shadow:var(--shadow-sm); flex-wrap:nowrap;">
         <div style="${getTabStyle('ranking')}" onclick="setAdminTab('ranking')">
-          <i class="ph-fill ph-trophy"></i> 稼働・評価ランキング
+          <i class="ph-fill ph-trophy"></i> ランキング
         </div>
         <div style="${getTabStyle('users')}" onclick="setAdminTab('users')">
           <i class="ph-fill ph-users-three"></i> 全登録者台帳
@@ -3586,7 +3977,10 @@ function AdminView() {
           <i class="ph-fill ph-car"></i> 車両・運行日報
         </div>
         <div style="${getTabStyle('compliance')}" onclick="setAdminTab('compliance')">
-          <i class="ph-fill ph-shield-check"></i> 実費監査
+          <i class="ph-fill ph-gas-pump"></i> 実費監査
+        </div>
+        <div style="${getTabStyle('audit')}" onclick="setAdminTab('audit')">
+          <i class="ph-fill ph-shield-check"></i> 監査ログ
         </div>
       </div>
 
