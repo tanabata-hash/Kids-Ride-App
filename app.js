@@ -4141,31 +4141,87 @@ window.submitSurveyForm = function(event) {
   state.surveyResponses.unshift(newResponse);
   localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));
 
-  // 4. サンクスモーダル表示
-  const modalHtml = `
-    <div id="survey-thanks-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="card" style="max-width:500px; width:100%; padding:24px; background:white; border-radius:16px; text-align:center; box-shadow:var(--shadow-xl); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-        <div style="width:64px; height:64px; border-radius:50%; background:#ecfdf5; color:#10b981; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 16px auto;">
-          <i class="ph-fill ph-check-circle"></i>
-        </div>
-        <h3 style="font-size:1.25rem; font-weight:800; color:#0f172a; margin-bottom:8px;">ご回答ありがとうございました！</h3>
-        <p style="font-size:0.85rem; color:#475569; line-height:1.6; margin-bottom:16px;">
-          お忙しい中、アンケートにご協力いただき心より感謝申し上げます。<br>
-          皆様からいただいた貴重なご意見は、三鷹市子ども政策部への実態報告および、安心・安全な互助送迎モデルの設計に大切に活用させていただきます。
-        </p>
-        ${email.trim() ? `
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:16px; font-size:0.8rem; color:#166534; text-align:left;">
-            <i class="ph-fill ph-envelope-simple"></i> <strong>実証実験モニター優先案内:</strong><br>
-            ご登録のメールアドレス（<strong>${email.trim()}</strong>）宛に、実証実験の準備が整い次第優先してご案内をお届けします。
+  // 4. ボタンのローディング状態化（二重送信防止）
+  const submitBtn = event.target ? event.target.querySelector('button[type="submit"]') : null;
+  const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="ph-bold ph-spinner" style="animation: spin 1s linear infinite; display:inline-block;"></i> 送信中...';
+  }
+
+  // 5. サーバー送信処理（Vercel Serverless Function & 外部Webhook）
+  const sendPromises = [];
+
+  // (A) Vercel サーバーレスAPI (/api/survey) へ送信
+  try {
+    sendPromises.push(
+      fetch('/api/survey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newResponse)
+      }).catch(err => {
+        console.warn('API submission failed, saved locally:', err);
+      })
+    );
+  } catch (e) {
+    console.warn('API error:', e);
+  }
+
+  // (B) 登録済みGoogle Apps Script Webhook URLがあれば送信（スプレッドシート自動蓄積）
+  const customGasUrl = localStorage.getItem('kidsride_custom_gas_url');
+  if (customGasUrl && customGasUrl.startsWith('https://script.google.com/')) {
+    try {
+      sendPromises.push(
+        fetch(customGasUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newResponse)
+        }).catch(err => {
+          console.warn('GAS webhook failed:', err);
+        })
+      );
+    } catch (e) {
+      console.warn('GAS error:', e);
+    }
+  }
+
+  // 送信完了を待ってモーダル表示（最大1.5秒でタイムアウトしてユーザーを待たせない）
+  Promise.race([
+    Promise.allSettled(sendPromises),
+    new Promise(resolve => setTimeout(resolve, 1500))
+  ]).finally(() => {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnText;
+    }
+
+    // 6. サンクスモーダル表示
+    const modalHtml = `
+      <div id="survey-thanks-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+        <div class="card" style="max-width:500px; width:100%; padding:24px; background:white; border-radius:16px; text-align:center; box-shadow:var(--shadow-xl); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+          <div style="width:64px; height:64px; border-radius:50%; background:#ecfdf5; color:#10b981; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 16px auto;">
+            <i class="ph-fill ph-check-circle"></i>
           </div>
-        ` : ''}
-        <button class="btn btn-primary" onclick="document.getElementById('survey-thanks-modal').remove(); navigate('login');" style="width:100%; padding:12px; font-weight:700;">
-          KidsRide アプリトップへ戻る
-        </button>
+          <h3 style="font-size:1.25rem; font-weight:800; color:#0f172a; margin-bottom:8px;">ご回答ありがとうございました！</h3>
+          <p style="font-size:0.85rem; color:#475569; line-height:1.6; margin-bottom:16px;">
+            お忙しい中、アンケートにご協力いただき心より感謝申し上げます。<br>
+            皆様からいただいた貴重なご意見は、三鷹市子ども政策部への実態報告および、安心・安全な互助送迎モデルの設計に大切に活用させていただきます。
+          </p>
+          ${email.trim() ? `
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:16px; font-size:0.8rem; color:#166534; text-align:left;">
+              <i class="ph-fill ph-envelope-simple"></i> <strong>実証実験モニター優先案内:</strong><br>
+              ご登録のメールアドレス（<strong>${email.trim()}</strong>）宛に、実証実験の準備が整い次第優先してご案内をお届けします。
+            </div>
+          ` : ''}
+          <button class="btn btn-primary" onclick="document.getElementById('survey-thanks-modal').remove(); navigate('login');" style="width:100%; padding:12px; font-weight:700;">
+            KidsRide アプリトップへ戻る
+          </button>
+        </div>
       </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', modalHtml);
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  });
 };
 
 window.showSurveyDetailModal = function(id) {
@@ -5051,6 +5107,9 @@ function AdminView() {
           <span style="font-size:0.75rem; color:var(--text-muted);">三鷹市子ども政策部への事前相談・保育園説明および実証実験モニター抽出用リアルタイムデータ</span>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#16a34a; color:#16a34a; display:flex; align-items:center; gap:4px;" onclick="window.openGasSettingModal()">
+            <i class="ph ph-table"></i> スプレッドシート連携 (GAS設定)
+          </button>
           <a href="#survey" class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#0284c7; color:#0284c7; display:flex; align-items:center; gap:4px; text-decoration:none;" onclick="navigate('survey'); return false;">
             <i class="ph ph-arrow-square-out"></i> アンケート画面を開く
           </a>
@@ -7195,6 +7254,80 @@ window.exportSurveyCSV = function() {
     'アンケート回答 CSV出力完了',
     `三鷹市保護者アンケート回答データ（全${responses.length}件）をCSV出力しました。\nExcelで文字化けせず開けるUTF-8(BOM付き)形式です。三鷹市子ども政策部への相談資料や保育施設への提案資料としてご活用いただけます。`
   );
+};
+
+// ============================================================================
+// Googleスプレッドシート連携（Google Apps Script Webhook）設定モーダル
+// ============================================================================
+
+window.openGasSettingModal = function() {
+  const currentUrl = localStorage.getItem('kidsride_custom_gas_url') || '';
+  
+  const modalHtml = `
+    <div id="gas-setting-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="card" style="max-width:580px; width:100%; padding:24px; background:white; border-radius:16px; box-shadow:var(--shadow-xl); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0; display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-table" style="color:#16a34a;"></i> Googleスプレッドシート自動蓄積 連携設定
+          </h3>
+          <button style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;" onclick="document.getElementById('gas-setting-modal').remove();">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:16px; font-size:0.8rem; color:#166534; line-height:1.6;">
+          <strong><i class="ph-fill ph-check-circle"></i> 簡単1分設定:</strong><br>
+          Googleスプレッドシートの「拡張機能 > Apps Script」に専用コードを貼り付けてデプロイするだけで、アンケート回答がリアルタイムに1行ずつ自動蓄積されるようになります。
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:6px;">
+            Google Apps Script ウェブアプリURL:
+          </label>
+          <input type="url" id="gas-webhook-url-input" class="form-control" placeholder="https://script.google.com/macros/s/AKfycb.../exec" value="${currentUrl}" style="width:100%; font-size:0.85rem; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+          <span style="display:block; font-size:0.72rem; color:#64748b; margin-top:4px;">
+            ※設定コードはプロジェクト内の <code>docs/GOOGLE_APPS_SCRIPT_SURVEY.js</code> に用意されています。
+          </span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <button class="btn btn-outline" style="font-size:0.8rem; padding:8px 14px;" onclick="document.getElementById('gas-setting-modal').remove();">
+            閉じる
+          </button>
+          <div style="display:flex; gap:8px;">
+            ${currentUrl ? `
+              <button class="btn btn-outline" style="border-color:#ef4444; color:#ef4444; font-size:0.8rem; padding:8px 14px;" onclick="localStorage.removeItem('kidsride_custom_gas_url'); document.getElementById('gas-setting-modal').remove(); showCustomAlert('解除完了', 'スプレッドシート連携を解除しました。');">
+                連携解除
+              </button>
+            ` : ''}
+            <button class="btn btn-primary" style="background:#16a34a; font-size:0.8rem; padding:8px 18px;" onclick="window.saveGasWebhookUrl();">
+              設定を保存する
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.saveGasWebhookUrl = function() {
+  const input = document.getElementById('gas-webhook-url-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val && !val.startsWith('https://script.google.com/')) {
+    alert('有効なGoogle Apps ScriptのURL（https://script.google.com/...）を入力してください。');
+    return;
+  }
+  if (val) {
+    localStorage.setItem('kidsride_custom_gas_url', val);
+    showCustomAlert('保存完了', 'Googleスプレッドシート連携URLを設定しました。\n今後送信されるすべてのアンケート回答がスプレッドシートにリアルタイム自動追記されます！');
+  } else {
+    localStorage.removeItem('kidsride_custom_gas_url');
+    showCustomAlert('クリア', '連携URLをクリアしました。');
+  }
+  const modal = document.getElementById('gas-setting-modal');
+  if (modal) modal.remove();
 };
 
 // URLハッシュ＆クエリ判定（#admin または #survey）
