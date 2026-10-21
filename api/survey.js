@@ -1,5 +1,7 @@
-// Vercel Serverless Function: 三鷹市保護者送迎アンケート回答 受信API
+// Vercel Serverless Function: 三鷹市保護者送迎アンケート回答 受信・メール通知API
 // エンドポイント: POST /api/survey
+
+const FORMSUBMIT_TOKEN = '8110355a424c7cae2d1068e2dfc68556'; // tanabata@kidsride.jp 認証済トークン
 
 export default async function handler(req, res) {
   // CORSヘッダー設定
@@ -57,7 +59,43 @@ export default async function handler(req, res) {
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''
     }, null, 2));
 
-    // 2. 外部Webhook（Google Apps Script / スプレッドシート連携用URL等）が設定されている場合は転送
+    // 2. 代表メール（tanabata@kidsride.jp）へFormSubmit経由で即時メール自動通知
+    const emailPayload = {
+      _subject: `【KidsRideアンケート回答】${(data.childAges || []).join('・')}の保護者様より新しい回答が届きました (${data.id})`,
+      _template: 'table',
+      '回答ID': data.id,
+      '回答日時': data.submittedAt || new Date().toLocaleString('ja-JP'),
+      'Q1_お子様の年齢': Array.isArray(data.childAges) ? data.childAges.join('、') : (data.childAges || ''),
+      'Q2_普段の送迎手段': Array.isArray(data.transportMethods) ? data.transportMethods.join('、') : (data.transportMethods || ''),
+      'Q3_第一希望園の断念経験': data.barrierToFirstChoice || '',
+      'Q3付問_断念理由詳細': data.barrierDetail || '（未記入）',
+      'Q4_送迎の困りごと頻度': data.troubleFrequency || '',
+      'Q5_困るシチュエーション': Array.isArray(data.troubleSituations) ? data.troubleSituations.join('、') : (data.troubleSituations || ''),
+      'Q6_過去の対処法': Array.isArray(data.copingMethods) ? data.copingMethods.join('、') : (data.copingMethods || ''),
+      'Q7_助け合いサービス利用意向': data.mutualAidAcceptance || '',
+      'Q8_のびのびひろば送迎意向': data.nobinobiStay || '',
+      'Q9_安心できる送迎手段': Array.isArray(data.safeTransportMethods) ? data.safeTransportMethods.join('、') : (data.safeTransportMethods || ''),
+      'Q10_サポーター協力意向': data.supporterInterest || '',
+      'Q11_自由記述・ご意見': data.comments || '（なし）',
+      'Q12_モニター希望メールアドレス': data.email || '（未登録）'
+    };
+
+    try {
+      await fetch(`https://formsubmit.co/ajax/${FORMSUBMIT_TOKEN}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': 'https://www.kidsride.jp',
+          'Referer': 'https://www.kidsride.jp/'
+        },
+        body: JSON.stringify(emailPayload)
+      });
+    } catch (mailErr) {
+      console.error('[MAIL_NOTIFICATION_ERROR]', mailErr.message);
+    }
+
+    // 3. 外部Webhook（Google Apps Script / スプレッドシート連携用URL等）が設定されている場合は転送
     const externalWebhookUrl = process.env.SURVEY_WEBHOOK_URL;
     if (externalWebhookUrl) {
       try {
@@ -74,7 +112,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       id: data.id,
-      message: 'アンケート回答を受信・記録しました。'
+      message: 'アンケート回答を受信・記録し、メール通知を送信しました。'
     });
   } catch (err) {
     console.error('[API_ERROR]', err);
