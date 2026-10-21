@@ -172,9 +172,26 @@ function validateAndRedeemCarBikePoints({ transporterId, redemptionAmountJPY, ri
   };
 }
 
+// URL判定ヘルパー（初期化時＆ルート変更時共通）
+function getInitialRoute() {
+  try {
+    const hash = (window.location.hash || '').toLowerCase();
+    const search = (window.location.search || '').toLowerCase();
+    if (hash === '#survey' || hash === '#/survey' || hash.startsWith('#survey') || search.includes('view=survey') || search.includes('mode=survey')) {
+      return 'survey';
+    }
+    if (hash === '#admin' || hash === '#/admin' || hash.startsWith('#admin') || search.includes('view=admin') || search.includes('portal=admin')) {
+      return 'admin';
+    }
+  } catch (e) {
+    console.error('Route parse error:', e);
+  }
+  return 'login';
+}
+
 // 状態管理 (State management)
 const state = {
-  currentRoute: 'login',
+  currentRoute: getInitialRoute(),
   isAuthenticated: false, // 未ログイン状態に初期化
   // 保護者保有ポイント (消費専用・換金不可)
   userPoints: 1000,
@@ -289,6 +306,38 @@ const state = {
       gpsLogStatus: 'GPS全軌跡保管済'
     }
   ],
+  // 事故報告および保険会社（損保ジャパン・損害サービスセンター）連携台帳
+  accidentReports: JSON.parse(localStorage.getItem('kidsride_accident_reports') || 'null') || [
+    {
+      reportId: 'ACC-20260825-01',
+      recordId: 'TR-20260825-01',
+      date: '2026/08/25 08:28',
+      driverName: '佐藤 カズヤ',
+      driverPhone: '090-1234-5678',
+      vehicleModel: 'トヨタ シエンタ ハイブリッド',
+      plateNumber: '多摩 501 さ 38-25',
+      vehicleOwner: '佐藤 カズヤ (自己所有自家用車)',
+      location: '三鷹市大沢2丁目 交差点手前10m付近',
+      weather: '晴れ / 良好',
+      policeReported: true,
+      policeStation: '警視庁 三鷹警察署 交通捜査係',
+      policeOfficer: '田中 警部補',
+      incidentNumber: '三鷹-2026-交0825-04',
+      opponentName: '伊藤 健太 様',
+      opponentPhone: '090-9876-5432',
+      opponentPlate: '多摩 300 ろ 12-34 (シルバー プリウス)',
+      opponentInsurance: '三井住友海上火災保険 (確認済)',
+      damageSelf: '左フロントバンパー擦り傷・フェンダー軽微変形',
+      damageOpponent: '右リヤドア擦り傷',
+      childInjured: 'なし（チャイルドシート着用・身体的負傷なし確認済）',
+      driverInjured: 'なし',
+      description: '保育園へ向かう途中、右折待ち車列を交わそうとした際、左側路肩から発進した相手車両の右側面に低速(約10km/h)で接触。直ちに停止し安全確保、児童の無事を確認した上で110番通報およびKidsRide本部へ電話一報を実施。',
+      status: '損保提出済', // '受付済' | '損保提出済' | '協定中' | '完了'
+      submittedToInsuranceDate: '2026/08/25 11:30',
+      insuranceClaimNumber: 'SJ-2026-TOKYO-998124',
+      handlingAgency: '株式会社 保険あっとなびプラネット (担当: 平 恭子 様)'
+    }
+  ],
   // ガソリン単価改訂の監査ログ（東京運輸支局提示用）
   gasRateAuditLogs: [
     {
@@ -384,7 +433,7 @@ const state = {
     localStorage.setItem('kidsride_admin_accounts', JSON.stringify(saved));
     return saved;
   })(),
-  adminTab: 'ranking', // 'ranking' | 'users' | 'vehicles' | 'compliance' | 'audit'
+  adminTab: 'ranking', // 'ranking' | 'users' | 'vehicles' | 'compliance' | 'audit' | 'accident'
   adminUserFilter: 'all', // 'all' | 'driver' | 'parent' | 'both' | 'pending'
   adminUserSearch: '',
   adminSortKey: 'rating', // 'rating' | 'rides' | 'utilization'
@@ -683,6 +732,137 @@ const state = {
       lastActive: '2026/08/26 14:20',
       totalRides: 0,
       rating: 0
+    }
+  ],
+  // 三鷹市・子育て世帯送迎アンケート回答データベース
+  surveyResponses: JSON.parse(localStorage.getItem('kidsride_survey_responses') || 'null') || [
+    {
+      id: 'SURVEY-202610-001',
+      submittedAt: '2026/10/12 14:22',
+      childAges: ['2〜3歳（年少少・年少）', '4〜5歳（年中・年長）'],
+      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
+      barrierToFirstChoice: 'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
+      barrierDetail: '第1希望だった認可園は自宅（下連雀）から2.3kmの距離にあり、雨の日に子ども2人を乗せての自転車移動が極めて危険と判断し、設備や教育方針には妥協して近隣の小規模園にしました。',
+      troubleFrequency: '週に1〜2回程度感じる',
+      troubleSituations: ['雨・雪・強風・猛暑などの悪天候', '急な仕事の残業、突発的な会議や外出', 'きょうだいの急な発熱・通院・看病'],
+      copingMethods: ['仕事を無理に切り上げて急いで対応した', '祖父母・親族に急遽お願いした'],
+      mutualAidAcceptance: 'ぜひ定期的に利用したい',
+      safeTransportMethods: ['自転車での送迎（幼児同乗器・ヘルメット着用）', 'リアルタイムで現在地がGPS追跡できれば安心', '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
+      supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
+      comments: '同じ園のママ・パパ同士であれば人となりも分かりやすく、最高2億円の包括保険があるなら安心して頼めそうです。雨の日の送迎が特に助かります。',
+      email: 'm.yamada.mitaka@example.com'
+    },
+    {
+      id: 'SURVEY-202610-002',
+      submittedAt: '2026/10/12 16:45',
+      childAges: ['0〜1歳（乳児）'],
+      transportMethods: ['徒歩', 'バス・公共交通機関'],
+      barrierToFirstChoice: '諦めはしなかったが、非常に迷った・現在も無理をして通わせている',
+      barrierDetail: '復職後の勤務時間とバスの運行間隔が合わず、朝夕ともに小走りでギリギリの送迎を続けており、毎日の精神的負担が大きいです。',
+      troubleFrequency: 'ほぼ毎日感じる',
+      troubleSituations: ['朝の出勤時間と登園時間のスケジュール調整', '急な仕事の残業、突発的な会議や外出'],
+      copingMethods: ['仕事を無理に切り上げて急いで対応した', '解決できず、園に謝罪して遅れて迎えに行った'],
+      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
+      safeTransportMethods: ['徒歩での引率（手つなぎ・見守り歩行）', 'リアルタイムで現在地がGPS追跡できれば安心'],
+      supporterInterest: '自分は送迎を「頼む側」専任で利用したい',
+      comments: 'ファミサポは登録や事前面談に時間がかかり突発的な残業に対応できないため、アプリで園内完結する仕組みを切望しています。',
+      email: 'k.sato.mure@example.com'
+    },
+    {
+      id: 'SURVEY-202610-003',
+      submittedAt: '2026/10/13 09:15',
+      childAges: ['4〜5歳（年中・年長）'],
+      transportMethods: ['自家用車'],
+      barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
+      barrierDetail: '',
+      troubleFrequency: '月に数回程度感じる',
+      troubleSituations: ['保護者自身の体調不良・ケガ・通院', '習い事の開始時間とお迎え時間の重複'],
+      copingMethods: ['祖父母・親族に急遽お願いした', '園のママ友・パパ友にお願いした'],
+      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
+      safeTransportMethods: ['自家用車での送迎（適合チャイルドシート常設）', '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
+      supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
+      comments: '毎朝車で送迎しているので、同じクラスの子を一緒に乗せていくことは全然可能です。ガソリン代実費が出るのも気兼ねがなくて良いですね。',
+      email: 'ken.tanaka@example.com'
+    },
+    {
+      id: 'SURVEY-202610-004',
+      submittedAt: '2026/10/13 11:30',
+      childAges: ['小学校低学年（1〜3年生）', '2〜3歳（年少少・年少）'],
+      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）', '徒歩'],
+      barrierToFirstChoice: 'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
+      barrierDetail: '学童と保育園のお迎え場所・時間が完全に分断されており、物理的に片道15分の距離を移動しきれないため、上の子の学童を民間から遠い公立に変えざるを得ませんでした。',
+      troubleFrequency: 'ほぼ毎日感じる',
+      troubleSituations: ['習い事の開始時間とお迎え時間の重複', '雨・雪・強風・猛暑などの悪天候', 'きょうだいの急な発熱・通院・看病'],
+      copingMethods: ['仕事を無理に切り上げて急いで対応した', '園のママ友・パパ友にお願いした'],
+      mutualAidAcceptance: 'ぜひ定期的に利用したい',
+      safeTransportMethods: ['徒歩での引率（手つなぎ・見守り歩行）', '自転車での送迎（幼児同乗器・ヘルメット着用）'],
+      supporterInterest: 'タイミングや都合が合う日なら引き受けてもよい',
+      comments: 'きょうだい別園・学童問題は三鷹市の共働き家庭にとって死活問題です。ぜひ早期の実証実験と制度化を応援しています！',
+      email: 'a.watanabe.osawa@example.com'
+    },
+    {
+      id: 'SURVEY-202610-005',
+      submittedAt: '2026/10/13 18:20',
+      childAges: ['2〜3歳（年少少・年少）'],
+      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
+      barrierToFirstChoice: '諦めはしなかったが、非常に迷った・現在も無理をして通わせている',
+      barrierDetail: '東八道路を横断するルートで交通量が多く、雨の日はスリップや大型車との接触事故への不安が常にあります。',
+      troubleFrequency: '週に1〜2回程度感じる',
+      troubleSituations: ['雨・雪・強風・猛暑などの悪天候', '急な仕事の残業、突発的な会議や外出'],
+      copingMethods: ['仕事を無理に切り上げて急いで対応した', 'タクシー等を利用した'],
+      mutualAidAcceptance: '条件や相手（顔見知りかどうか等）次第で利用を検討したい',
+      safeTransportMethods: ['リアルタイムで現在地がGPS追跡できれば安心', '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
+      supporterInterest: '興味はあるが、他人の子どもを預かる責任や事故が少し心配',
+      comments: '安全運転の講習や、事前の顔合わせの場があるとより安心できます。',
+      email: 'yuki.ito.mitaka@example.com'
+    },
+    {
+      id: 'SURVEY-202610-006',
+      submittedAt: '2026/10/14 08:40',
+      childAges: ['4〜5歳（年中・年長）'],
+      transportMethods: ['徒歩'],
+      barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
+      barrierDetail: '',
+      troubleFrequency: '年に数回・ごく稀にある',
+      troubleSituations: ['保護者自身の体調不良・ケガ・通院', 'きょうだいの急な発熱・通院・看病'],
+      copingMethods: ['仕事を無理に切り上げて急いで対応した'],
+      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
+      safeTransportMethods: ['徒歩での引率（手つなぎ・見守り歩行）'],
+      supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
+      comments: '自営業で時間に融通が利く日もあるので、近所の困っているママ・パパを徒歩で一緒に連れて行くくらいなら喜んでお手伝いできます。',
+      email: 't.suzuki.inokashira@example.com'
+    },
+    {
+      id: 'SURVEY-202610-007',
+      submittedAt: '2026/10/14 12:10',
+      childAges: ['0〜1歳（乳児）', '小学校低学年（1〜3年生）'],
+      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
+      barrierToFirstChoice: 'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
+      barrierDetail: '妊娠後期から産後にかけて上の子の送迎ができなくなる不安から、教育方針が気に入っていた少し遠くの園を諦めました。送迎サポートがあれば諦めずに済んだと思います。',
+      troubleFrequency: '週に1〜2回程度感じる',
+      troubleSituations: ['きょうだいの急な発熱・通院・看病', '雨・雪・強風・猛暑などの悪天候', '朝の出勤時間と登園時間のスケジュール調整'],
+      copingMethods: ['仕事を無理に切り上げて急いで対応した', '祖父母・親族に急遽お願いした'],
+      mutualAidAcceptance: 'ぜひ定期的に利用したい',
+      safeTransportMethods: ['自転車での送迎（幼児同乗器・ヘルメット着用）', 'リアルタイムで現在地がGPS追跡できれば安心'],
+      supporterInterest: '送迎を引き受ける余裕はない',
+      comments: '産前産後やワンオペ育児中の送迎支援は本当に切実です。ぜひ三鷹市全体に広がってほしいです。',
+      email: 'e.takahashi@example.com'
+    },
+    {
+      id: 'SURVEY-202610-008',
+      submittedAt: '2026/10/14 15:50',
+      childAges: ['2〜3歳（年少少・年少）'],
+      transportMethods: ['自家用車', '自転車（子ども乗せ・電動アシスト含む）'],
+      barrierToFirstChoice: '諦めはしなかったが、非常に迷った・現在も無理をして通わせている',
+      barrierDetail: '園の駐車場が狭く雨の日は送迎待ちの車で渋滞し、近隣クレームや遅刻の焦りがあります。',
+      troubleFrequency: '月に数回程度感じる',
+      troubleSituations: ['急な仕事の残業、突発的な会議や外出', '雨・雪・強風・猛暑などの悪天候'],
+      copingMethods: ['ベビーシッター・民間送迎サービスを利用した', '仕事を無理に切り上げて急いで対応した'],
+      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
+      safeTransportMethods: ['自家用車での送迎（適合チャイルドシート常設）', 'リアルタイムで現在地がGPS追跡できれば安心'],
+      supporterInterest: 'タイミングや都合が合う日なら引き受けてもよい',
+      comments: '民間シッターは1回数千円かかるので、同じ園の保護者同士の相互扶助で実費＋少額謝礼で済むならとてもありがたいです。',
+      email: 'ryo.matsuda@example.com'
     }
   ]
 };
@@ -1053,7 +1233,7 @@ function renderHeader(title) {
 }
 
 function renderBottomNav() {
-  if (state.currentRoute === 'admin') return '';
+  if (state.currentRoute === 'admin' || state.currentRoute === 'survey') return '';
 
   const routes = [
     { id: 'dashboard', icon: 'ph-house', label: 'ホーム' },
@@ -1152,9 +1332,32 @@ function AuthLoginView() {
       <div class="welcome-logo-container" style="width: 130px; height: 143px; margin: 24px auto 32px auto;">
         <img src="./logo.png" alt="KidsRide Logo" class="welcome-logo" style="width: 100%; height: 100%; object-fit: contain;">
       </div>
-      <div style="text-align:center; margin-bottom:24px;">
+      <div style="text-align:center; margin-bottom:20px;">
         <h2 style="color:var(--primary); font-size:1.5rem;">${greeting}</h2>
         <p style="font-size:0.9rem;">メールアドレスとパスワードを入力してください。</p>
+      </div>
+
+      <!-- 三鷹市保護者アンケート実施中バナー -->
+      <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #0284c7, #0369a1); color: white; padding: 14px 16px; border-radius: 12px; box-shadow: var(--shadow-md); cursor: pointer; border: none;" onclick="navigate('survey')">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: rgba(255,255,255,0.2); width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0;">
+              📋
+            </div>
+            <div>
+              <div style="font-size: 0.7rem; background: #fef08a; color: #854d0e; font-weight: 800; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-bottom: 3px;">
+                三鷹市・子育て世帯対象 / 所要2〜3分
+              </div>
+              <h3 style="margin: 0; font-size: 1.02rem; font-weight: 800; color: white; line-height: 1.3;">
+                通園・送迎アンケート実施中
+              </h3>
+              <p style="margin: 2px 0 0 0; font-size: 0.76rem; opacity: 0.9;">
+                実態調査にご協力ください（実証実験優先案内あり）
+              </p>
+            </div>
+          </div>
+          <i class="ph-bold ph-caret-right" style="font-size: 1.4rem; opacity: 0.85;"></i>
+        </div>
       </div>
 
       <!-- サービス概要案内（銀行口座審査・関係者向け） -->
@@ -1234,6 +1437,14 @@ window.showTermsModal = function() {
 
           <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px;">第5条（個人情報の厳重な保護）</h4>
           <p>運営者は、お預かりした児童情報および保護者情報を「個人情報保護法」および当サービスのプライバシーポリシーに基づき、アクセス権限の厳格な分離、2段階認証（2FA）、監査ログの記録等を通じ、漏洩・滅失の防止に万全の安全管理措置を講じます。</p>
+
+          <h4 style="color:#0f172a; border-bottom:2px solid #e2e8f0; padding-bottom:6px; background:#f0fdf4; padding:8px 10px; border-left:4px solid #16a34a; border-radius:4px;">第6条（包括保険制度および事故時対応）</h4>
+          <p style="font-weight:600; color:#14532d; margin:0 0 6px 0;">
+            本サービスにおけるすべての送迎活動には、あいおいニッセイ同和損害保険株式会社との提携に基づく包括的な保険制度が適用されます。<br>
+            1. <strong>自動車送迎：</strong>移動支援サービス事業用自動車保険包括特約（対人賠償無制限、対物賠償無制限、人身傷害3,000万円）が付帯されます（※車両保険・代車費用は除く）。<br>
+            2. <strong>自転車・徒歩送迎：</strong>「NPO活動総合保険」が包括適用され、送迎中の第三者に対する法律上の損害賠償責任（対人・対物共通 最高2億円・免責0円）、見舞金費用、預かり品損壊補償、および送迎サポーター自身の傷害補償（入院2,000円/日、通院1,000円/日、死亡後遺障害200万円）が付帯されます。<br>
+            3. 万が一の事故発生時、送迎担当者は直ちに負傷者の救護および警察（110番）への届出を行い、KidsRide本部へ報告するものとします。損害保険会社への事故受付、有責判断、および保険金請求手続きの窓口はKidsRide運営事務局が一本化して担います。
+          </p>
         </div>
         <div style="padding:12px 20px; border-top:1px solid #e2e8f0; background:#f8fafc; text-align:right;">
           <button onclick="document.getElementById('terms-modal').remove()" class="btn btn-primary" style="width:auto; padding:8px 24px;">閉じる</button>
@@ -2258,6 +2469,15 @@ function RequestFormView() {
           </div>
         `}
 
+        <!-- 全送迎モード 包括保険適用バッジ -->
+        <div style="margin-top:14px; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 12px; font-size:0.75rem; color:#166534; display:flex; align-items:flex-start; gap:8px;">
+          <i class="ph-fill ph-shield-check" style="font-size:1.2rem; color:#16a34a; flex-shrink:0; margin-top:1px;"></i>
+          <div>
+            <strong style="display:block; margin-bottom:2px; color:#14532d;">全送迎便にあいおいニッセイ同和損保の包括保険が自動適用</strong>
+            <span>車送迎は自動車包括特約（対人対物無制限）、自転車・徒歩送迎は「NPO活動総合保険」（最高2億円・見舞金付帯）で手厚く保護されます。追加の保険料は一切かかりません。</span>
+          </div>
+        </div>
+
         <button type="submit" class="btn btn-primary" style="margin-top:16px;">この内容で依頼する</button>
       </form>
     </main>
@@ -2710,6 +2930,20 @@ function ActiveRideView() {
             </div>
           ` : ''}
         </div>
+      </div>
+
+      <!-- 🚨 緊急・事故発生時 初動クイックバー -->
+      <div style="background:#fff7ed; border:1px solid #fed7aa; border-left:4px solid #ea580c; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <i class="ph-fill ph-shield-warning" style="color:#ea580c; font-size:1.25rem;"></i>
+          <div>
+            <strong style="font-size:0.82rem; color:#9a3412; display:block;">万が一の事故・接触時の初動手順</strong>
+            <span style="font-size:0.7rem; color:#c2410c;">※自損事故でも法律・保険上、必ず警察(110番)へ届出が必要です</span>
+          </div>
+        </div>
+        <button class="btn btn-outline" style="border-color:#ea580c; color:#ea580c; background:white; font-size:0.75rem; padding:5px 10px; width:auto; font-weight:700; white-space:nowrap;" onclick="showDriverIncidentCardModal()">
+          初動カード
+        </button>
       </div>
 
       <!-- Driver Info -->
@@ -3393,6 +3627,628 @@ window.showTransportRecordModal = function(recordId) {
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
+// ============================================================================
+// 三鷹市・子育て世帯対象 通園・送迎アンケート調査画面 (kidsride.jp/#survey)
+// ============================================================================
+
+function SurveyView() {
+  return `
+    <header style="background:linear-gradient(135deg, #1e3a8a, #0284c7); color:white; padding:14px 20px; box-shadow:var(--shadow-md); position:sticky; top:0; z-index:100;">
+      <div style="max-width:680px; margin:0 auto; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <img src="./logo.png" alt="KidsRide" style="width:34px; height:34px; object-fit:contain; background:white; border-radius:8px; padding:2px;">
+          <div>
+            <div style="font-weight:800; font-size:1.02rem; letter-spacing:0.02em;">KidsRide 実態調査アンケート</div>
+            <div style="font-size:0.68rem; color:#bae6fd; font-weight:600;">三鷹市・子育て世帯送迎ニーズ調査</div>
+          </div>
+        </div>
+        <button onclick="navigate('login')" class="btn" style="background:rgba(255,255,255,0.18); color:white; padding:5px 12px; font-size:0.75rem; border-radius:6px; width:auto; border:1px solid rgba(255,255,255,0.3);">
+          アプリへ戻る
+        </button>
+      </div>
+    </header>
+
+    <main class="fade-in" style="max-width:680px; margin:0 auto; padding:18px 14px 80px 14px; background:#f8fafc; min-height:100vh;">
+      <!-- 調査概要ヒーローカード -->
+      <div class="card" style="margin-bottom:18px; padding:18px; background:linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); border:1px solid #bae6fd; border-radius:12px; box-shadow:var(--shadow-sm);">
+        <div style="display:inline-flex; align-items:center; gap:6px; background:#0284c7; color:white; font-size:0.72rem; font-weight:700; padding:3px 10px; border-radius:12px; margin-bottom:10px;">
+          <i class="ph-fill ph-clock"></i> 所要時間 約2〜3分 / 無記名回答可
+        </div>
+        <h2 style="font-size:1.22rem; color:#0f172a; margin:0 0 10px 0; font-weight:800; line-height:1.4;">
+          【三鷹市・子育て世帯対象】<br>子どもの通園・送迎に関するアンケート調査
+        </h2>
+        <p style="font-size:0.82rem; line-height:1.6; color:#475569; margin-bottom:10px;">
+          日頃の子育てとお仕事の両立、誠にお疲れ様です。<br>
+          <strong>一般社団法人KidsRide（キッズライド）</strong>では、三鷹市における「保育園・幼稚園・学童の送迎負担を軽減し、同じ園の保護者同士が安心して助け合える仕組みづくり」を目指し、実態調査を実施しております。
+        </p>
+        <p style="font-size:0.82rem; line-height:1.6; color:#475569; margin-bottom:12px;">
+          皆様からいただいた生の声は、今後の地域サポート体制の設計や、三鷹市役所・保育施設への提案資料として大切に活用させていただきます。率直なご意見・お困りごとをお聞かせいただけますと幸いです。
+        </p>
+        <div style="font-size:0.72rem; color:#64748b; background:#f1f5f9; padding:8px 12px; border-radius:6px; line-height:1.5; border:1px solid #e2e8f0;">
+          🔒 ※本アンケートは統計的に処理され、個人の特定や営業活動に使用されることは一切ございません。
+        </div>
+      </div>
+
+      <!-- アンケートフォーム本体 -->
+      <form id="kidsride-survey-form" onsubmit="window.submitSurveyForm(event)">
+
+        <!-- セクション1: 基本属性 -->
+        <div style="margin-bottom:8px; font-weight:800; color:#0284c7; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-user"></i> 【基本属性】
+        </div>
+
+        <!-- Q1 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q1. お子様の年齢（学年）を教えてください <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(複数可)</span>
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${['0〜1歳（乳児）', '2〜3歳（年少少・年少）', '4〜5歳（年中・年長）', '小学校低学年（1〜3年生）', '小学校高学年（4〜6年生）'].map((opt) => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="checkbox" name="q1_childAges" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q2. 普段の主な送迎・通園手段は何ですか？ <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(複数可)</span>
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${['自転車（子ども乗せ・電動アシスト含む）', '徒歩', '自家用車', 'バス・公共交通機関'].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="checkbox" name="q2_transportMethods" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;">
+              <input type="checkbox" name="q2_transportMethods" value="その他" id="q2-other-check" style="width:18px; height:18px; accent-color:#0284c7;">
+              <span style="font-size:0.84rem; white-space:nowrap;">その他:</span>
+              <input type="text" id="q2-other-text" placeholder="例: ベビーカーなど" class="form-control" style="padding:4px 8px; font-size:0.8rem; height:auto;">
+            </div>
+          </div>
+        </div>
+
+        <!-- セクション2: 園選びにおける送迎の壁 -->
+        <div style="margin-top:20px; margin-bottom:8px; font-weight:800; color:#0284c7; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-barrier"></i> 【園選び・保活における「送迎の壁」】
+        </div>
+
+        <!-- Q3 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q3. 園選び（保活・就園準備）の際、「毎日の送迎が難しい・不安」という理由で、第一希望の幼稚園・保育園・学童を諦めたり、選択肢から外した経験はありますか？
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
+              '諦めはしなかったが、非常に迷った・現在も無理をして通わせている',
+              'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）'
+            ].map((opt) => `
+              <label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem; line-height:1.4;">
+                <input type="radio" name="q3_barrier" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7; margin-top:2px;" required onchange="window.toggleQ3Detail(this.value)">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+            <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;">
+              <input type="radio" name="q3_barrier" value="その他" id="q3-other-radio" style="width:18px; height:18px; accent-color:#0284c7;" onchange="window.toggleQ3Detail(this.value)">
+              <span style="font-size:0.84rem; white-space:nowrap;">その他:</span>
+              <input type="text" id="q3-other-text" placeholder="自由記述" class="form-control" style="padding:4px 8px; font-size:0.8rem; height:auto;">
+            </label>
+          </div>
+
+          <!-- Q3 付問 (条件表示/常時入力可) -->
+          <div id="q3-detail-box" style="margin-top:12px; padding:12px; background:#f0f9ff; border-radius:8px; border:1px solid #bae6fd;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label style="font-weight:700; font-size:0.82rem; color:#0369a1;">
+                Q3-付問. （「ある」「非常に迷った」方へ）具体的にどのような点（距離、坂道、雨の日の移動、勤務時間等）がネックになりましたか？
+              </label>
+              <span style="background:#94a3b8; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap;">任意</span>
+            </div>
+            <textarea id="q3_detail" rows="3" class="form-control" placeholder="例: 自宅から片道2km以上あり雨の日に自転車で通うのが難しかった、朝の始業時間に間に合わないため諦めた、など" style="width:100%; font-size:0.82rem; line-height:1.5; padding:8px; border-radius:6px; border:1px solid #cbd5e1;"></textarea>
+          </div>
+        </div>
+
+        <!-- セクション3: 日頃の困りごと -->
+        <div style="margin-top:20px; margin-bottom:8px; font-weight:800; color:#0284c7; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-warning-circle"></i> 【日頃の送迎のお困りごと・潜在ニーズ】
+        </div>
+
+        <!-- Q4 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q4. 日頃の通園・送迎において、「調整が大変だ」「困った」と感じる頻度はどれくらいですか？
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              'ほぼ毎日感じる',
+              '週に1〜2回程度感じる',
+              '月に数回程度感じる',
+              '年に数回・ごく稀にある',
+              '困ったことはほとんどない'
+            ].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="radio" name="q4_frequency" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;" required>
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Q5 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q5. 特に送迎で「困る・助けてほしい」と感じるシチュエーションは何ですか？ <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(最大3つまで)</span>
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              '急な仕事の残業、突発的な会議や外出',
+              'きょうだいの急な発熱・通院・看病',
+              '雨・雪・強風・猛暑などの悪天候',
+              '保護者自身の体調不良・ケガ・通院',
+              '習い事の開始時間とお迎え時間の重複',
+              '朝の出勤時間と登園時間のスケジュール調整'
+            ].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="checkbox" name="q5_situations" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;">
+              <input type="checkbox" name="q5_situations" value="その他" id="q5-other-check" style="width:18px; height:18px; accent-color:#0284c7;">
+              <span style="font-size:0.84rem; white-space:nowrap;">その他:</span>
+              <input type="text" id="q5-other-text" placeholder="自由記述" class="form-control" style="padding:4px 8px; font-size:0.8rem; height:auto;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Q6 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q6. 送迎に困った際、これまでにどのように解決・対処してきましたか？ <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(複数可)</span>
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              '仕事を無理に切り上げて急いで対応した',
+              '祖父母・親族に急遽お願いした',
+              '園のママ友・パパ友にお願いした',
+              'ファミリー・サポート・センターを利用した',
+              'ベビーシッター・民間送迎サービスを利用した',
+              'タクシー等を利用した',
+              '解決できず、園に謝罪して遅れて迎えに行った'
+            ].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="checkbox" name="q6_coping" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+            <div style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;">
+              <input type="checkbox" name="q6_coping" value="その他" id="q6-other-check" style="width:18px; height:18px; accent-color:#0284c7;">
+              <span style="font-size:0.84rem; white-space:nowrap;">その他:</span>
+              <input type="text" id="q6-other-text" placeholder="自由記述" class="form-control" style="padding:4px 8px; font-size:0.8rem; height:auto;">
+            </div>
+          </div>
+        </div>
+
+        <!-- セクション4: KidsRideへの受容度 -->
+        <div style="margin-top:20px; margin-bottom:8px; font-weight:800; color:#0284c7; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-hand-heart"></i> 【助け合いサービス（KidsRide）への受容度】
+        </div>
+
+        <!-- Q7 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q7. もし「同じ園に通う身元確認済みの保護者同士」で送迎を助け合える仕組み（※損害保険最高2億円付き）があった場合、利用してみたいですか？
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              'ぜひ定期的に利用したい',
+              '急な残業や困った時だけ、単発（都度）で利用したい',
+              '条件や相手（顔見知りかどうか等）次第で利用を検討したい',
+              'あまり利用したいとは思わない',
+              'わからない'
+            ].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="radio" name="q7_acceptance" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;" required>
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Q8 (新設: 三鷹市子ども育成課連携・のびのびひろば送迎ニーズ) -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1.5px solid #0284c7; background:#f0f9ff;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#0369a1; line-height:1.4;">
+              Q8. 急な残業や用事の際、園の降園後に三鷹駅前の「子ども家庭支援センター のびのびひろば（最大夜22時までのトワイライトステイ等）」へ送迎代行してもらい、一時預かりを利用できる仕組みがあれば利用したいですか？
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="font-size:0.75rem; color:#475569; margin-bottom:10px; line-height:1.4;">
+            ※三鷹市では認可園・学童等に在籍するお子様も、三鷹駅前の「のびのびひろば（三鷹駅前保育園隣接）」にて夜22時までの一時預かり（トワイライトステイ）が利用可能です。
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              'ぜひ利用したい（急な残業や夜遅くなる日に非常に助かる）',
+              '状況によっては利用したい（数か月に数回程度、残業や通院時など）',
+              '利用しない（現在の園の延長保育や家庭内で対応できている）',
+              'そもそも最大夜22時まで預けられる制度（のびのびひろば・トワイライトステイ）を知らなかった'
+            ].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="radio" name="q8_nobinobiStay" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;" required>
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Q9 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q9. 他の保護者にお子様の送迎をお願いする場合、どのような手段であれば安心できますか？ <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(複数可)</span>
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              '徒歩での引率（手つなぎ・見守り歩行）',
+              '自転車での送迎（幼児同乗器・ヘルメット着用）',
+              '自家用車での送迎（適合チャイルドシート常設）',
+              '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心',
+              'リアルタイムで現在地がGPS追跡できれば安心',
+              'どのような手段であっても不安がある'
+            ].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="checkbox" name="q9_safeMethods" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;">
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- セクション5: サポーター関心 -->
+        <div style="margin-top:20px; margin-bottom:8px; font-weight:800; color:#0284c7; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-users-three"></i> 【送迎サポーター（引き受け手）としての関心】
+        </div>
+
+        <!-- Q10 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q10. ご自身がお子様を送迎する「ついで」に、同じ園のお子様を一緒に送迎すること（謝礼ポイントや実費還元あり）に関心はありますか？
+            </label>
+            <span style="background:#ef4444; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">必須</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            ${[
+              'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
+              'タイミングや都合が合う日なら引き受けてもよい',
+              '興味はあるが、他人の子どもを預かる責任や事故が少し心配',
+              '自分は送迎を「頼む側」専任で利用したい',
+              '送迎を引き受ける余裕はない'
+            ].map(opt => `
+              <label style="display:flex; align-items:center; gap:10px; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; cursor:pointer; background:#fff; font-size:0.84rem;">
+                <input type="radio" name="q10_supporter" value="${opt}" style="width:18px; height:18px; accent-color:#0284c7;" required>
+                <span>${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- セクション6: 自由記述・実証モニター -->
+        <div style="margin-top:20px; margin-bottom:8px; font-weight:800; color:#0284c7; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-chat-teardrop-dots"></i> 【自由記述 ＆ 実証実験モニター募集】
+        </div>
+
+        <!-- Q11 -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q11. 子どもの通園・送迎に関して、「こんなサポートがあったら助かる」というご要望や日頃のお悩みがあればご自由にご記入ください。
+            </label>
+            <span style="background:#94a3b8; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">任意</span>
+          </div>
+          <textarea id="q11_comments" rows="3" class="form-control" placeholder="例: 雨の日の送迎が本当に大変なので助けてほしい、同じクラスの顔見知りの保護者とつながりたい、など" style="width:100%; font-size:0.84rem; line-height:1.5; padding:8px 12px; border-radius:6px; border:1px solid #cbd5e1;"></textarea>
+        </div>
+
+        <!-- Q12 -->
+        <div class="card" style="padding:16px; margin-bottom:24px; border-radius:10px; border:1px solid #bae6fd; background:#f0f9ff;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#0369a1; line-height:1.4;">
+              Q12. 今後実施予定の「無料実証実験（モニター体験）」の優先案内や詳細情報をご希望の方は、メールアドレスをご記入ください。
+            </label>
+            <span style="background:#0284c7; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">任意</span>
+          </div>
+          <div style="font-size:0.75rem; color:#475569; margin-bottom:10px;">
+            ※ご記入いただいたメールアドレスは、KidsRide実証実験のご案内のみに使用いたします。
+          </div>
+          <input type="email" id="q12_email" class="form-control" placeholder="example@domain.com" style="width:100%; font-size:0.88rem; padding:10px 12px; border-radius:6px; border:1px solid #cbd5e1; background:white;">
+        </div>
+
+        <!-- 送信ボタン -->
+        <div style="text-align:center; margin-top:20px;">
+          <button type="submit" class="btn btn-primary" style="width:100%; max-width:400px; padding:14px; font-size:1.05rem; font-weight:800; border-radius:30px; box-shadow:0 4px 14px rgba(2, 132, 199, 0.4); display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+            <i class="ph-fill ph-paper-plane-tilt"></i> アンケートを送信する
+          </button>
+          <div style="font-size:0.72rem; color:#64748b; margin-top:10px;">
+            ご協力誠にありがとうございました。送信後も回答内容は安全に保管されます。
+          </div>
+        </div>
+
+      </form>
+
+      <!-- フッタークレジット -->
+      <footer style="text-align:center; margin-top:40px; padding-top:20px; border-top:1px solid #e2e8f0; font-size:0.75rem; color:#94a3b8; line-height:1.6;">
+        <strong>一般社団法人KidsRide（キッズライド）</strong><br>
+        〒181-0013 東京都三鷹市下連雀3-38-4<br>
+        Webサイト: <a href="https://www.kidsride.jp/" target="_blank" style="color:#0284c7; text-decoration:none;">https://www.kidsride.jp/</a><br>
+        &copy; 2026 KidsRide Association. All Rights Reserved.
+      </footer>
+    </main>
+  `;
+}
+
+window.toggleQ3Detail = function(val) {
+  const box = document.getElementById('q3-detail-box');
+  if (box) {
+    if (val.includes('ある') || val.includes('迷った')) {
+      box.style.display = 'block';
+    }
+  }
+};
+
+window.submitSurveyForm = function(event) {
+  event.preventDefault();
+
+  // 1. 各項目の取得とバリデーション
+  const getChecked = (name) => {
+    return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
+  };
+  const getRadio = (name) => {
+    const el = document.querySelector(`input[name="${name}"]:checked`);
+    return el ? el.value : '';
+  };
+
+  const childAges = getChecked('q1_childAges');
+  if (childAges.length === 0) {
+    showCustomAlert('未入力の項目があります', 'Q1のお子様の年齢（学年）を1つ以上選択してください。');
+    return;
+  }
+
+  let transportMethods = getChecked('q2_transportMethods');
+  const q2OtherText = (document.getElementById('q2-other-text') || {}).value || '';
+  if (transportMethods.includes('その他') && q2OtherText.trim()) {
+    transportMethods = transportMethods.filter(m => m !== 'その他');
+    transportMethods.push(`その他(${q2OtherText.trim()})`);
+  }
+  if (transportMethods.length === 0) {
+    showCustomAlert('未入力の項目があります', 'Q2の普段の送迎手段を1つ以上選択してください。');
+    return;
+  }
+
+  let barrier = getRadio('q3_barrier');
+  const q3OtherText = (document.getElementById('q3-other-text') || {}).value || '';
+  if (barrier === 'その他' && q3OtherText.trim()) {
+    barrier = `その他(${q3OtherText.trim()})`;
+  }
+  if (!barrier) {
+    showCustomAlert('未入力の項目があります', 'Q3の第一希望園の断念経験について選択してください。');
+    return;
+  }
+  const barrierDetail = (document.getElementById('q3_detail') || {}).value || '';
+
+  const frequency = getRadio('q4_frequency');
+  if (!frequency) {
+    showCustomAlert('未入力の項目があります', 'Q4の送迎で困る頻度を選択してください。');
+    return;
+  }
+
+  let situations = getChecked('q5_situations');
+  const q5OtherText = (document.getElementById('q5-other-text') || {}).value || '';
+  if (situations.includes('その他') && q5OtherText.trim()) {
+    situations = situations.filter(s => s !== 'その他');
+    situations.push(`その他(${q5OtherText.trim()})`);
+  }
+  if (situations.length === 0) {
+    showCustomAlert('未入力の項目があります', 'Q5の困るシチュエーションを1つ以上選択してください。');
+    return;
+  }
+
+  let coping = getChecked('q6_coping');
+  const q6OtherText = (document.getElementById('q6-other-text') || {}).value || '';
+  if (coping.includes('その他') && q6OtherText.trim()) {
+    coping = coping.filter(c => c !== 'その他');
+    coping.push(`その他(${q6OtherText.trim()})`);
+  }
+  if (coping.length === 0) {
+    showCustomAlert('未入力の項目があります', 'Q6のこれまでの対処法を1つ以上選択してください。');
+    return;
+  }
+
+  const acceptance = getRadio('q7_acceptance');
+  if (!acceptance) {
+    showCustomAlert('未入力の項目があります', 'Q7の助け合いサービスの利用意向を選択してください。');
+    return;
+  }
+
+  const nobinobiStay = getRadio('q8_nobinobiStay');
+  if (!nobinobiStay) {
+    showCustomAlert('未入力の項目があります', 'Q8の「のびのびひろば（トワイライトステイ等）」送迎利用意向を選択してください。');
+    return;
+  }
+
+  const safeMethods = getChecked('q9_safeMethods');
+  if (safeMethods.length === 0) {
+    showCustomAlert('未入力の項目があります', 'Q9の安心できる送迎手段を1つ以上選択してください。');
+    return;
+  }
+
+  const supporter = getRadio('q10_supporter');
+  if (!supporter) {
+    showCustomAlert('未入力の項目があります', 'Q10のついで送迎サポーターへの関心を選択してください。');
+    return;
+  }
+
+  const comments = (document.getElementById('q11_comments') || {}).value || '';
+  const email = (document.getElementById('q12_email') || {}).value || '';
+
+  // 2. 回答オブジェクト作成
+  const newResponse = {
+    id: 'SURVEY-' + Date.now().toString().slice(-6),
+    submittedAt: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+    childAges: childAges,
+    transportMethods: transportMethods,
+    barrierToFirstChoice: barrier,
+    barrierDetail: barrierDetail.trim(),
+    troubleFrequency: frequency,
+    troubleSituations: situations,
+    copingMethods: coping,
+    mutualAidAcceptance: acceptance,
+    nobinobiStay: nobinobiStay,
+    safeTransportMethods: safeMethods,
+    supporterInterest: supporter,
+    comments: comments.trim(),
+    email: email.trim()
+  };
+
+  // 3. stateに保存 & LocalStorage同期
+  if (!state.surveyResponses) state.surveyResponses = [];
+  state.surveyResponses.unshift(newResponse);
+  localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));
+
+  // 4. サンクスモーダル表示
+  const modalHtml = `
+    <div id="survey-thanks-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="card" style="max-width:500px; width:100%; padding:24px; background:white; border-radius:16px; text-align:center; box-shadow:var(--shadow-xl); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <div style="width:64px; height:64px; border-radius:50%; background:#ecfdf5; color:#10b981; display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 16px auto;">
+          <i class="ph-fill ph-check-circle"></i>
+        </div>
+        <h3 style="font-size:1.25rem; font-weight:800; color:#0f172a; margin-bottom:8px;">ご回答ありがとうございました！</h3>
+        <p style="font-size:0.85rem; color:#475569; line-height:1.6; margin-bottom:16px;">
+          お忙しい中、アンケートにご協力いただき心より感謝申し上げます。<br>
+          皆様からいただいた貴重なご意見は、三鷹市子ども政策部への実態報告および、安心・安全な互助送迎モデルの設計に大切に活用させていただきます。
+        </p>
+        ${email.trim() ? `
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:16px; font-size:0.8rem; color:#166534; text-align:left;">
+            <i class="ph-fill ph-envelope-simple"></i> <strong>実証実験モニター優先案内:</strong><br>
+            ご登録のメールアドレス（<strong>${email.trim()}</strong>）宛に、実証実験の準備が整い次第優先してご案内をお届けします。
+          </div>
+        ` : ''}
+        <button class="btn btn-primary" onclick="document.getElementById('survey-thanks-modal').remove(); navigate('login');" style="width:100%; padding:12px; font-weight:700;">
+          KidsRide アプリトップへ戻る
+        </button>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.showSurveyDetailModal = function(id) {
+  const responses = state.surveyResponses || [];
+  const r = responses.find(item => item.id === id);
+  if (!r) return;
+
+  const modalHtml = `
+    <div id="survey-detail-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="card" style="max-width:600px; width:100%; max-height:90vh; overflow-y:auto; padding:22px; background:white; border-radius:14px; box-shadow:var(--shadow-xl);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+          <div>
+            <h3 style="margin:0; font-size:1.1rem; color:#0f172a; font-weight:800;">アンケート回答詳細 (${r.id})</h3>
+            <span style="font-size:0.75rem; color:#64748b;">回答日時: ${r.submittedAt}</span>
+          </div>
+          <button onclick="document.getElementById('survey-detail-modal').remove()" style="border:none; background:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px; font-size:0.83rem;">
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q1. お子様の年齢（学年）:</strong>
+            <div>${(r.childAges || []).join('、')}</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q2. 主な通園・送迎手段:</strong>
+            <div>${(r.transportMethods || []).join('、')}</div>
+          </div>
+          <div style="background:#fef2f2; border:1px solid #fecaca; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#991b1b; display:block; margin-bottom:4px;">Q3. 第一希望園の断念経験:</strong>
+            <div style="font-weight:700;">${r.barrierToFirstChoice}</div>
+            ${r.barrierDetail ? `<div style="margin-top:6px; font-size:0.8rem; color:#7f1d1d; background:white; padding:8px; border-radius:6px; border:1px dashed #f87171;"><strong>【理由詳細】</strong> ${r.barrierDetail}</div>` : ''}
+          </div>
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q4. 送迎の困りごと頻度:</strong>
+            <div>${r.troubleFrequency}</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q5. 困るシチュエーション:</strong>
+            <div>${(r.troubleSituations || []).join('、')}</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q6. 過去の対処方法:</strong>
+            <div>${(r.copingMethods || []).join('、')}</div>
+          </div>
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#166534; display:block; margin-bottom:4px;">Q7. 助け合いサービス利用意向:</strong>
+            <div style="font-weight:700;">${r.mutualAidAcceptance}</div>
+          </div>
+          <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#1e40af; display:block; margin-bottom:4px;">Q8. のびのびひろば（夜間トワイライトステイ等）への送迎利用意向:</strong>
+            <div style="font-weight:700; color:#1d4ed8;">${r.nobinobiStay || '未回答（旧版）'}</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q9. 安心できる送迎手段:</strong>
+            <div>${(r.safeTransportMethods || []).join('、')}</div>
+          </div>
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#166534; display:block; margin-bottom:4px;">Q10. ついで送迎サポーター関心:</strong>
+            <div style="font-weight:700;">${r.supporterInterest}</div>
+          </div>
+          ${r.comments ? `
+            <div style="background:#fffbeb; border:1px solid #fde68a; padding:10px 12px; border-radius:8px;">
+              <strong style="color:#92400e; display:block; margin-bottom:4px;">Q11. 自由記述・ご要望:</strong>
+              <div style="color:#78350f; line-height:1.5;">${r.comments}</div>
+            </div>
+          ` : ''}
+          ${r.email ? `
+            <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:10px 12px; border-radius:8px;">
+              <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q12. モニター希望メールアドレス:</strong>
+              <div style="font-weight:700; color:#0284c7;">${r.email}</div>
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="margin-top:18px; text-align:right;">
+          <button class="btn btn-primary" onclick="document.getElementById('survey-detail-modal').remove()" style="padding:8px 20px; font-size:0.85rem; width:auto;">閉じる</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
 function AdminAuthView() {
   const currentTab = state.adminAuthTab || 'login';
 
@@ -3943,6 +4799,504 @@ function AdminView() {
         </div>
       </div>
     `;
+  } else if (currentTab === 'accident') {
+    // 6. 事故対応・損害サービスセンター（損保ジャパン）連携タブ
+    const reports = state.accidentReports || [];
+    
+    tabContentHtml = `
+      <!-- 保険代理店 ＆ 損害サービスセンター 連携ホットライン ヘッダー -->
+      <div class="card" style="margin-bottom:16px; border-left:5px solid #ea580c; background:#fff7ed; padding:16px; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+          <div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+              <span style="font-size:0.7rem; background:#fed7aa; color:#9a3412; padding:2px 8px; border-radius:4px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+                <i class="ph-fill ph-shield-check"></i> KidsRide 包括自動車保険特約
+              </span>
+              <span style="font-size:0.7rem; background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+                <i class="ph-fill ph-check-circle"></i> 自社システム帳票提出 承認済 (PDF/印刷)
+              </span>
+            </div>
+            <h3 style="margin:4px 0 2px 0; font-size:1.1rem; color:#7c2d12; font-weight:800; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-buildings" style="color:#ea580c;"></i> あいおいニッセイ同和損害保険 × 保険あっとなびプラネット
+            </h3>
+            <div style="font-size:0.78rem; color:#9a3412; margin-top:2px;">
+              取扱代理店: <strong>株式会社 保険あっとなびプラネット東京西 (担当: 平 恭子 様)</strong> / TEL: 042-481-5203 (Mobile: 070-2251-1896)
+            </div>
+            <div style="font-size:0.73rem; color:#c2410c; margin-top:4px;">
+              適用特約: <strong>移動支援サービス事業用自動車保険（優先補償・車両保険なし）特約</strong>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline" style="border-color:#15803d; color:#15803d; background:white; padding:7px 12px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:6px;" onclick="exportNpoInsuranceRosterCSV()">
+              <i class="ph ph-users-three"></i> 【準記名式】備付名簿CSV出力 (NPO保険用)
+            </button>
+            <button class="btn btn-outline" style="border-color:#1e3a8a; color:#1e3a8a; background:white; padding:7px 12px; font-size:0.75rem; font-weight:700; display:inline-flex; align-items:center; gap:6px;" onclick="exportMonthlyInsuranceCSV()">
+              <i class="ph ph-file-csv"></i> 月次実績報告CSV出力 (車送迎90円/h精算)
+            </button>
+            <button class="btn btn-primary" style="background:#ea580c; border:none; padding:7px 12px; font-size:0.75rem; width:auto; display:flex; align-items:center; gap:6px;" onclick="showAccidentReportModal()">
+              <i class="ph ph-plus-circle"></i> 事故報告の新規登録(代行受付)
+            </button>
+          </div>
+        </div>
+
+        <!-- 保険料・特約ステータス ガイド（車送迎用） -->
+        <div style="margin-top:12px; display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:8px; font-size:0.72rem;">
+          <div style="background:white; border:1px solid #fed7aa; padding:8px 10px; border-radius:6px;">
+            <span style="color:#64748b; display:block;">【車送迎】保険料精算レート:</span>
+            <strong style="color:#c2410c; font-size:0.85rem;">90円 × 運行時間 × 日数</strong>
+            <div style="color:#475569; font-size:0.68rem; margin-top:2px;">暫定保険料: 34,020円 (42日×9台 納付済想定)</div>
+          </div>
+          <div style="background:white; border:1px solid #fed7aa; padding:8px 10px; border-radius:6px;">
+            <span style="color:#64748b; display:block;">【車送迎】補償限度額:</span>
+            <strong style="color:#0f172a;">対人無制限 / 対物無制限 / 人身傷害3,000万</strong>
+            <div style="color:#b91c1c; font-size:0.68rem; margin-top:2px;">※車両保険・代車費用は対象外</div>
+          </div>
+          <div style="background:white; border:1px solid #fed7aa; padding:8px 10px; border-radius:6px;">
+            <span style="color:#64748b; display:block;">【車送迎】月次通知ルール:</span>
+            <strong style="color:#15803d;"><i class="ph-fill ph-calendar-check"></i> 毎月通知必須 (実績0日でも要連絡)</strong>
+            <div style="color:#475569; font-size:0.68rem; margin-top:2px;">満期時に月次実績の総計に基づき確定精算</div>
+          </div>
+        </div>
+
+        <!-- 【自転車・徒歩送迎用】NPO活動総合保険 包括補償カード -->
+        <div style="margin-top:12px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="background:#22c55e; color:white; font-size:0.7rem; font-weight:800; padding:2px 8px; border-radius:4px;">
+                <i class="ph-fill ph-bicycle"></i><i class="ph-fill ph-person-simple-walk" style="margin-left:2px;"></i> 自転車・徒歩送迎用
+              </span>
+              <strong style="color:#166534; font-size:0.9rem;">あいおいニッセイ同和損保「NPO活動総合保険」包括特約</strong>
+            </div>
+            <span style="font-size:0.7rem; color:#15803d; background:white; border:1px solid #bbf7d0; padding:2px 8px; border-radius:4px; font-weight:700;">
+              準記名式（都度の名簿提出不要・KidsRide備付名簿で全員自動適用）
+            </span>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:8px; font-size:0.72rem;">
+            <div style="background:white; border:1px solid #bbf7d0; padding:8px 10px; border-radius:6px;">
+              <span style="color:#166534; font-weight:700; display:block;">① 第三者賠償責任 (対人・対物)</span>
+              <strong style="font-size:0.85rem; color:#0f172a;">最高 2億円</strong>（免責金額 0円）<br>
+              <span style="color:var(--text-muted); font-size:0.67rem;">自転車走行中・歩行引率中の接触・物損事故を包括補償</span>
+            </div>
+            <div style="background:white; border:1px solid #bbf7d0; padding:8px 10px; border-radius:6px;">
+              <span style="color:#166534; font-weight:700; display:block;">② 送迎サポーター団体傷害保険</span>
+              <strong style="font-size:0.85rem; color:#0f172a;">入院日額2,000円 / 通院日額1,000円</strong><br>
+              <span style="color:var(--text-muted); font-size:0.67rem;">死亡・後遺障害200万 / 1日目から対象 / 往復途上も含む</span>
+            </div>
+            <div style="background:white; border:1px solid #bbf7d0; padding:8px 10px; border-radius:6px;">
+              <span style="color:#166534; font-weight:700; display:block;">③ 見舞金・管理財物・事故対応費用</span>
+              <strong style="font-size:0.85rem; color:#0f172a;">見舞金50万 / 預かり財物50万 / 対応費用500万</strong><br>
+              <span style="color:var(--text-muted); font-size:0.67rem;">園児の持ち物破損・事故現場保存・初期対応費用をカバー</span>
+            </div>
+          </div>
+          <div style="margin-top:8px; font-size:0.68rem; color:#166534; background:white; padding:6px 10px; border-radius:4px; border:1px solid #bbf7d0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px;">
+            <span><strong>【加入運用】</strong> 登録された送迎サポーターは当システム上の名簿に自動登載され、活動開始と同時に保険が適用されます。</span>
+            <span style="color:#b91c1c; font-weight:700;">※示談代行サービスなし（事故時は必ずKidsRide本部が損保と連携）</span>
+          </div>
+        </div>
+
+        <!-- 損保提出用3大書類 チェックリスト（あいおいニッセイ同和損保承認済） -->
+        <div style="margin-top:10px; background:white; border:1px solid #fed7aa; border-radius:8px; padding:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:4px;">
+            <div style="font-size:0.78rem; font-weight:700; color:#9a3412; display:flex; align-items:center; gap:4px;">
+              <i class="ph-fill ph-check-square-offset"></i> 損害サービスセンター提出 必須3大帳票（有責・無責判断）
+            </div>
+            <span style="font-size:0.68rem; color:#15803d; font-weight:700;">※あいおいニッセイ同和損保承認：KidsRideシステム帳票（PDF）で正式提出可</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:8px; font-size:0.73rem;">
+            <div style="background:#fffaf0; border:1px solid #ffedd5; padding:8px 10px; border-radius:6px;">
+              <strong style="color:#c2410c;">① 事故報告書</strong><br>
+              <span style="color:var(--text-muted);">日時・場所・相手方情報・詳細状況・損傷写真・警察届出状況</span>
+            </div>
+            <div style="background:#fffaf0; border:1px solid #ffedd5; padding:8px 10px; border-radius:6px;">
+              <strong style="color:#c2410c;">② 輸送記録（運行証明書）</strong><br>
+              <span style="color:var(--text-muted);">出発/帰庫時刻・児童乗降場所・走行距離・サービス提供中GPS証明</span>
+            </div>
+            <div style="background:#fffaf0; border:1px solid #ffedd5; padding:8px 10px; border-radius:6px;">
+              <strong style="color:#c2410c;">③ 事故車両の車検証 / 備付名簿証明</strong><br>
+              <span style="color:var(--text-muted);">車送迎: 車検証・自賠責 / 自転車・徒歩送迎: 備付名簿登録証明</span>
+            </div>
+          </div>
+          <div style="margin-top:8px; font-size:0.7rem; color:#475569; background:#f8fafc; padding:6px 10px; border-radius:4px; border:1px solid #e2e8f0;">
+            <strong>【重要運用規則】</strong> 登録ドライバー・サポーターが直接あいおいニッセイ同和損保へ事故報告することは禁止されています。事故発生時は必ずKidsRide本部が受領し、本ポータルより代理報告および書類提出を行ってください。
+          </div>
+        </div>
+      </div>
+
+      <!-- 事故・接触トラブル 受付台帳 -->
+      <div class="card" style="margin-bottom:20px; padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+          <div>
+            <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-warning-diamond" style="color:#ef4444;"></i> 事故・接触トラブル受付台帳 (${reports.length}件)
+            </h3>
+            <span style="font-size:0.72rem; color:var(--text-muted);">警察届出済み事故の有責判断および損保サービスセンター提出管理</span>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:8px;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.72rem; text-align:left;">
+            <thead>
+              <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:var(--text-muted);">
+                <th style="padding:8px;">事故ID / 発生日時</th>
+                <th style="padding:8px;">運転者 / 車両番号</th>
+                <th style="padding:8px;">発生場所 / 相手方</th>
+                <th style="padding:8px; text-align:center;">警察届出(110番)</th>
+                <th style="padding:8px; text-align:center;">損保ステータス</th>
+                <th style="padding:8px; text-align:center;">損保提出用書類発行</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reports.map(r => `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:10px 8px; white-space:nowrap;">
+                    <strong style="color:var(--text-main); font-size:0.78rem;">${r.reportId}</strong><br>
+                    <span style="color:var(--text-muted); font-size:0.68rem;">${r.date}</span>
+                  </td>
+                  <td style="padding:10px 8px; white-space:nowrap;">
+                    <strong>${r.driverName}</strong><br>
+                    <span style="color:var(--primary); font-weight:700; font-size:0.7rem;">${r.plateNumber}</span><br>
+                    <span style="color:var(--text-muted); font-size:0.65rem;">${r.vehicleModel}</span>
+                  </td>
+                  <td style="padding:10px 8px;">
+                    <div style="font-weight:600; color:var(--text-main);">${r.location}</div>
+                    <div style="font-size:0.68rem; color:#475569; margin-top:2px;">
+                      相手: <strong>${r.opponentName || '単独（自損事故）'}</strong> ${r.opponentPlate ? `(${r.opponentPlate})` : ''}
+                    </div>
+                  </td>
+                  <td style="padding:10px 8px; text-align:center; white-space:nowrap;">
+                    ${r.policeReported ? `
+                      <span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-weight:700; font-size:0.68rem; display:inline-block;">
+                        <i class="ph-fill ph-check-circle"></i> 届出済
+                      </span>
+                      <div style="font-size:0.65rem; color:#15803d; margin-top:2px;">${r.policeStation || ''}</div>
+                    ` : `
+                      <span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:4px; font-weight:700; font-size:0.68rem; display:inline-block;">
+                        <i class="ph-fill ph-warning"></i> 未届出(要確認)
+                      </span>
+                    `}
+                  </td>
+                  <td style="padding:10px 8px; text-align:center; white-space:nowrap;">
+                    <span style="padding:3px 8px; border-radius:4px; font-weight:700; font-size:0.68rem; ${
+                      r.status === '損保提出済' ? 'background:#e0f2fe; color:#0369a1;' :
+                      r.status === '協定中' ? 'background:#fef3c7; color:#92400e;' :
+                      r.status === '完了' ? 'background:#dcfce7; color:#15803d;' :
+                      'background:#f1f5f9; color:#475569;'
+                    }">
+                      ${r.status}
+                    </span>
+                    <div style="font-size:0.65rem; color:#64748b; margin-top:2px;">${r.submittedToInsuranceDate || ''}</div>
+                  </td>
+                  <td style="padding:10px 8px; text-align:center; white-space:nowrap;">
+                    <button class="btn btn-outline" style="border-color:#ea580c; color:#ea580c; padding:4px 8px; font-size:0.7rem; width:auto; font-weight:700;" onclick="showAccidentProofModal('${r.reportId}')">
+                      <i class="ph ph-file-text"></i> 提出用証明書プレビュー
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // ==========================================
+  // 【タブ7】アンケート集計（三鷹市保護者実態調査）
+  // ==========================================
+  else if (currentTab === 'survey') {
+    const responses = state.surveyResponses || [];
+    const totalCount = responses.length;
+
+    // 集計計算
+    const barrierCount = responses.filter(r => (r.barrierToFirstChoice || '').includes('ある') || (r.barrierToFirstChoice || '').includes('迷った')).length;
+    const barrierRate = totalCount > 0 ? Math.round((barrierCount / totalCount) * 100) : 0;
+
+    const monitorCount = responses.filter(r => r.email && r.email.trim().length > 0).length;
+    const monitorRate = totalCount > 0 ? Math.round((monitorCount / totalCount) * 100) : 0;
+
+    const supporterCount = responses.filter(r => (r.supporterInterest || '').includes('協力') || (r.supporterInterest || '').includes('引き受けてもよい')).length;
+    const supporterRate = totalCount > 0 ? Math.round((supporterCount / totalCount) * 100) : 0;
+
+    const nobinobiCount = responses.filter(r => (r.nobinobiStay || '').includes('利用したい')).length;
+    const nobinobiRate = totalCount > 0 ? Math.round((nobinobiCount / totalCount) * 100) : 0;
+
+    // Q3内訳
+    const q3Has = responses.filter(r => (r.barrierToFirstChoice || '').startsWith('ある')).length;
+    const q3Doubt = responses.filter(r => (r.barrierToFirstChoice || '').startsWith('諦めはしなかったが')).length;
+    const q3None = responses.filter(r => (r.barrierToFirstChoice || '').startsWith('なかった')).length;
+
+    // Q7内訳
+    const q7Regular = responses.filter(r => (r.mutualAidAcceptance || '').includes('定期的に')).length;
+    const q7Spot = responses.filter(r => (r.mutualAidAcceptance || '').includes('単発')).length;
+    const q7Cond = responses.filter(r => (r.mutualAidAcceptance || '').includes('条件')).length;
+
+    // Q8内訳（のびのびひろば・トワイライトステイ送迎）
+    const q8Definite = responses.filter(r => (r.nobinobiStay || '').startsWith('ぜひ利用したい')).length;
+    const q8Situational = responses.filter(r => (r.nobinobiStay || '').startsWith('状況によっては')).length;
+    const q8No = responses.filter(r => (r.nobinobiStay || '').startsWith('利用しない')).length;
+    const q8Unaware = responses.filter(r => (r.nobinobiStay || '').includes('知らなかった')).length;
+
+    // Q10内訳 (旧Q9)
+    const q10Help = responses.filter(r => (r.supporterInterest || '').includes('ついでであれば')).length;
+    const q10Time = responses.filter(r => (r.supporterInterest || '').includes('タイミング')).length;
+    const q10Worry = responses.filter(r => (r.supporterInterest || '').includes('責任や事故')).length;
+
+    tabContentHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-chart-pie-slice" style="color:#0284c7;"></i> 【三鷹市】通園・送迎アンケート実態調査 集計ダッシュボード
+          </h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">三鷹市子ども政策部への事前相談・保育園説明および実証実験モニター抽出用リアルタイムデータ</span>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <a href="#survey" class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#0284c7; color:#0284c7; display:flex; align-items:center; gap:4px; text-decoration:none;" onclick="navigate('survey'); return false;">
+            <i class="ph ph-arrow-square-out"></i> アンケート画面を開く
+          </a>
+          <button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem; width:auto; display:flex; align-items:center; gap:6px; background:#0284c7;" onclick="exportSurveyCSV()">
+            <i class="ph ph-file-csv"></i> 回答全件CSV出力 (UTF-8 BOM)
+          </button>
+        </div>
+      </div>
+
+      <!-- アンケートKPIサマリーカード5枚 -->
+      <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; margin-bottom:16px;">
+        <div class="card" style="padding:12px; margin:0; border-left:4px solid #0284c7; background:#f0f9ff;">
+          <span style="font-size:0.72rem; color:#0369a1; font-weight:700; display:block;">総回答数</span>
+          <strong style="font-size:1.35rem; color:#0c4a6e;">${totalCount}<span style="font-size:0.75rem; font-weight:normal;"> 件</span></strong>
+          <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">三鷹市内子育て世帯</span>
+        </div>
+        <div class="card" style="padding:12px; margin:0; border-left:4px solid #ef4444; background:#fef2f2;">
+          <span style="font-size:0.72rem; color:#991b1b; font-weight:700; display:block;">第一希望園 断念・苦慮率</span>
+          <strong style="font-size:1.35rem; color:#7f1d1d;">${barrierRate}<span style="font-size:0.75rem; font-weight:normal;">%</span></strong>
+          <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">${barrierCount}世帯が送迎の壁を経験</span>
+        </div>
+        <div class="card" style="padding:12px; margin:0; border-left:4px solid #7c3aed; background:#f5f3ff;">
+          <span style="font-size:0.72rem; color:#6d28d9; font-weight:700; display:block;">のびのび送迎利用意向</span>
+          <strong style="font-size:1.35rem; color:#5b21b6;">${nobinobiRate}<span style="font-size:0.75rem; font-weight:normal;">%</span></strong>
+          <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">トワイライトステイ送迎</span>
+        </div>
+        <div class="card" style="padding:12px; margin:0; border-left:4px solid #10b981; background:#ecfdf5;">
+          <span style="font-size:0.72rem; color:#065f46; font-weight:700; display:block;">実証モニター優先案内希望</span>
+          <strong style="font-size:1.35rem; color:#064e3b;">${monitorCount}<span style="font-size:0.75rem; font-weight:normal;"> 名 (${monitorRate}%)</span></strong>
+          <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">メールアドレス登録済</span>
+        </div>
+        <div class="card" style="padding:12px; margin:0; border-left:4px solid #f59e0b; background:#fffbeb;">
+          <span style="font-size:0.72rem; color:#92400e; font-weight:700; display:block;">送迎サポーター協力意向</span>
+          <strong style="font-size:1.35rem; color:#78350f;">${supporterRate}<span style="font-size:0.75rem; font-weight:normal;">%</span></strong>
+          <span style="font-size:0.68rem; color:#64748b; display:block; margin-top:2px;">ついで送迎に前向きな世帯</span>
+        </div>
+      </div>
+
+      <!-- 分析インサイトカード（Q3, Q7, Q8, Q10グラフ集計：4枚構成） -->
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:16px;">
+        <!-- Q3 インサイト -->
+        <div class="card" style="padding:14px; margin:0; border:1px solid #e2e8f0;">
+          <div style="font-weight:700; font-size:0.83rem; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-barrier" style="color:#ef4444;"></i> Q3. 園選び「送迎の壁」
+          </div>
+          <div style="font-size:0.72rem; color:#64748b; margin-bottom:10px;">
+            第一希望の園を諦めたり選択肢から外した経験
+          </div>
+          <div style="display:flex; height:12px; border-radius:6px; overflow:hidden; margin-bottom:10px;">
+            <div style="width:${totalCount > 0 ? (q3Has/totalCount)*100 : 0}%; background:#ef4444;" title="諦めた: ${q3Has}件"></div>
+            <div style="width:${totalCount > 0 ? (q3Doubt/totalCount)*100 : 0}%; background:#f97316;" title="非常に迷った: ${q3Doubt}件"></div>
+            <div style="width:${totalCount > 0 ? (q3None/totalCount)*100 : 0}%; background:#22c55e;" title="なかった: ${q3None}件"></div>
+          </div>
+          <div style="font-size:0.72rem; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#dc2626;">● 諦めて別の園:</span>
+              <strong>${q3Has}件 (${totalCount > 0 ? Math.round((q3Has/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#ea580c;">● 非常に迷った/無理:</span>
+              <strong>${q3Doubt}件 (${totalCount > 0 ? Math.round((q3Doubt/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#16a34a;">● なかった:</span>
+              <strong>${q3None}件 (${totalCount > 0 ? Math.round((q3None/totalCount)*100) : 0}%)</strong>
+            </div>
+          </div>
+          <div style="margin-top:10px; padding:6px 8px; background:#fef2f2; border-radius:6px; font-size:0.68rem; color:#991b1b; line-height:1.4;">
+            💡 約${barrierRate}%が送迎の壁を経験。三鷹市子ども政策部への「送迎互助による希望園選択肢の拡大」提案の強い根拠となります。
+          </div>
+        </div>
+
+        <!-- Q7 インサイト -->
+        <div class="card" style="padding:14px; margin:0; border:1px solid #e2e8f0;">
+          <div style="font-weight:700; font-size:0.83rem; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-hand-heart" style="color:#0284c7;"></i> Q7. 助け合い送迎利用意向
+          </div>
+          <div style="font-size:0.72rem; color:#64748b; margin-bottom:10px;">
+            同一園保護者同士（包括保険付き）
+          </div>
+          <div style="display:flex; height:12px; border-radius:6px; overflow:hidden; margin-bottom:10px;">
+            <div style="width:${totalCount > 0 ? (q7Regular/totalCount)*100 : 0}%; background:#0284c7;" title="定期利用: ${q7Regular}件"></div>
+            <div style="width:${totalCount > 0 ? (q7Spot/totalCount)*100 : 0}%; background:#38bdf8;" title="単発利用: ${q7Spot}件"></div>
+            <div style="width:${totalCount > 0 ? (q7Cond/totalCount)*100 : 0}%; background:#cbd5e1;" title="条件次第: ${q7Cond}件"></div>
+          </div>
+          <div style="font-size:0.72rem; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#0369a1;">● 定期的に利用:</span>
+              <strong>${q7Regular}件 (${totalCount > 0 ? Math.round((q7Regular/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#0284c7;">● 急な残業等で単発:</span>
+              <strong>${q7Spot}件 (${totalCount > 0 ? Math.round((q7Spot/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#64748b;">● 条件・相手次第:</span>
+              <strong>${q7Cond}件 (${totalCount > 0 ? Math.round((q7Cond/totalCount)*100) : 0}%)</strong>
+            </div>
+          </div>
+          <div style="margin-top:10px; padding:6px 8px; background:#f0f9ff; border-radius:6px; font-size:0.68rem; color:#0369a1; line-height:1.4;">
+            💡 突発的な残業時などの都度・単発SOSニーズが極めて高く、保護者のセーフティネットとして期待されています。
+          </div>
+        </div>
+
+        <!-- Q8 インサイト（のびのびひろば送迎需要） -->
+        <div class="card" style="padding:14px; margin:0; border:1px solid #e2e8f0; border-top:3px solid #7c3aed;">
+          <div style="font-weight:700; font-size:0.83rem; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-buildings" style="color:#7c3aed;"></i> Q8. のびのび広場送迎代行
+          </div>
+          <div style="font-size:0.72rem; color:#64748b; margin-bottom:10px;">
+            駅前一時預かり・トワイライトステイ(〜22時)
+          </div>
+          <div style="display:flex; height:12px; border-radius:6px; overflow:hidden; margin-bottom:10px;">
+            <div style="width:${totalCount > 0 ? (q8Definite/totalCount)*100 : 0}%; background:#7c3aed;" title="ぜひ利用: ${q8Definite}件"></div>
+            <div style="width:${totalCount > 0 ? (q8Situational/totalCount)*100 : 0}%; background:#a78bfa;" title="状況次第: ${q8Situational}件"></div>
+            <div style="width:${totalCount > 0 ? (q8Unaware/totalCount)*100 : 0}%; background:#f59e0b;" title="知らなかった: ${q8Unaware}件"></div>
+            <div style="width:${totalCount > 0 ? (q8No/totalCount)*100 : 0}%; background:#cbd5e1;" title="利用しない: ${q8No}件"></div>
+          </div>
+          <div style="font-size:0.72rem; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#6d28d9;">● ぜひ利用したい:</span>
+              <strong>${q8Definite}件 (${totalCount > 0 ? Math.round((q8Definite/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#7c3aed;">● 状況により利用:</span>
+              <strong>${q8Situational}件 (${totalCount > 0 ? Math.round((q8Situational/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#b45309;">● 制度を知らなかった:</span>
+              <strong>${q8Unaware}件 (${totalCount > 0 ? Math.round((q8Unaware/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#64748b;">● 利用しない:</span>
+              <strong>${q8No}件 (${totalCount > 0 ? Math.round((q8No/totalCount)*100) : 0}%)</strong>
+            </div>
+          </div>
+          <div style="margin-top:10px; padding:6px 8px; background:#f5f3ff; border-radius:6px; font-size:0.68rem; color:#5b21b6; line-height:1.4;">
+            💡 <strong>三鷹市役所連携の核:</strong> 公立園タクシー送迎の運転手高齢化に対し、私立園・幼稚園からの送迎をKidsRideが補完する有力なデータです。
+          </div>
+        </div>
+
+        <!-- Q10 インサイト -->
+        <div class="card" style="padding:14px; margin:0; border:1px solid #e2e8f0;">
+          <div style="font-weight:700; font-size:0.83rem; color:#1e293b; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-users-three" style="color:#10b981;"></i> Q10. ついで送迎サポーター
+          </div>
+          <div style="font-size:0.72rem; color:#64748b; margin-bottom:10px;">
+            自身のお子様の送迎ついでに同乗・引率
+          </div>
+          <div style="display:flex; height:12px; border-radius:6px; overflow:hidden; margin-bottom:10px;">
+            <div style="width:${totalCount > 0 ? (q10Help/totalCount)*100 : 0}%; background:#10b981;" title="ついでなら協力: ${q10Help}件"></div>
+            <div style="width:${totalCount > 0 ? (q10Time/totalCount)*100 : 0}%; background:#6ee7b7;" title="都合が合えば: ${q10Time}件"></div>
+            <div style="width:${totalCount > 0 ? (q10Worry/totalCount)*100 : 0}%; background:#fcd34d;" title="責任が心配: ${q10Worry}件"></div>
+          </div>
+          <div style="font-size:0.72rem; display:flex; flex-direction:column; gap:4px;">
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#047857;">● ついでならぜひ:</span>
+              <strong>${q10Help}件 (${totalCount > 0 ? Math.round((q10Help/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#059669;">● 都合が合えば:</span>
+              <strong>${q10Time}件 (${totalCount > 0 ? Math.round((q10Time/totalCount)*100) : 0}%)</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:#d97706;">● 事故・責任が心配:</span>
+              <strong>${q10Worry}件 (${totalCount > 0 ? Math.round((q10Worry/totalCount)*100) : 0}%)</strong>
+            </div>
+          </div>
+          <div style="margin-top:10px; padding:6px 8px; background:#ecfdf5; border-radius:6px; font-size:0.68rem; color:#065f46; line-height:1.4;">
+            💡 半数以上が協力に前向き。「最高2億円包括保険」の事前説明が心理的不安を解消する決定打となっています。
+          </div>
+        </div>
+      </div>
+
+      <!-- 回答一覧テーブル -->
+      <div class="card" style="padding:14px; margin:0; border:1px solid #e2e8f0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <h4 style="margin:0; font-size:0.95rem; font-weight:700; color:#1e293b; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-list-dashes"></i> 回答台帳一覧 (${totalCount}件)
+          </h4>
+          <span style="font-size:0.72rem; color:#64748b;">行をクリックまたは右側ボタンで回答詳細（自由記述等）を確認できます</span>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.74rem; text-align:left;">
+            <thead>
+              <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:#475569;">
+                <th style="padding:10px 8px; white-space:nowrap;">回答ID</th>
+                <th style="padding:10px 8px; white-space:nowrap;">回答日時</th>
+                <th style="padding:10px 8px; white-space:nowrap;">お子様年齢</th>
+                <th style="padding:10px 8px; white-space:nowrap;">主な手段</th>
+                <th style="padding:10px 8px; white-space:nowrap;">第一希望断念(Q3)</th>
+                <th style="padding:10px 8px; white-space:nowrap;">困る頻度(Q4)</th>
+                <th style="padding:10px 8px; white-space:nowrap;">利用意向(Q7)</th>
+                <th style="padding:10px 8px; white-space:nowrap; color:#6d28d9;">のびのび送迎(Q8)</th>
+                <th style="padding:10px 8px; white-space:nowrap;">サポーター(Q10)</th>
+                <th style="padding:10px 8px; white-space:nowrap;">モニター案内(Q12)</th>
+                <th style="padding:10px 8px; text-align:center; white-space:nowrap;">詳細確認</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${responses.map((r, idx) => {
+                return `
+                  <tr style="border-bottom:1px solid #f1f5f9; ${idx % 2 === 1 ? 'background:#fafafa;' : ''}">
+                    <td style="padding:10px 8px; font-weight:700; color:#0284c7; white-space:nowrap;">${r.id}</td>
+                    <td style="padding:10px 8px; color:#64748b; white-space:nowrap;">${r.submittedAt}</td>
+                    <td style="padding:10px 8px; white-space:nowrap;">${(r.childAges || []).map(a => a.split('（')[0]).join(', ')}</td>
+                    <td style="padding:10px 8px; white-space:nowrap;">${(r.transportMethods || []).map(m => m.split('（')[0]).join(', ')}</td>
+                    <td style="padding:10px 8px;">
+                      <span style="padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.7rem; ${
+                        (r.barrierToFirstChoice || '').startsWith('ある') ? 'background:#fee2e2; color:#991b1b;' :
+                        (r.barrierToFirstChoice || '').startsWith('諦めはしなかったが') ? 'background:#ffedd5; color:#9a3412;' :
+                        'background:#dcfce7; color:#166534;'
+                      }">
+                        ${(r.barrierToFirstChoice || '').slice(0, 15)}...
+                      </span>
+                    </td>
+                    <td style="padding:10px 8px; white-space:nowrap;">${r.troubleFrequency}</td>
+                    <td style="padding:10px 8px; white-space:nowrap; font-weight:600; color:#0369a1;">${(r.mutualAidAcceptance || '').slice(0, 10)}...</td>
+                    <td style="padding:10px 8px; white-space:nowrap;">
+                      <span style="padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.7rem; ${
+                        (r.nobinobiStay || '').startsWith('ぜひ利用したい') ? 'background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe;' :
+                        (r.nobinobiStay || '').startsWith('状況によっては') ? 'background:#f3e8ff; color:#7c3aed;' :
+                        (r.nobinobiStay || '').includes('知らなかった') ? 'background:#fef3c7; color:#92400e;' :
+                        'background:#f1f5f9; color:#64748b;'
+                      }">
+                        ${(r.nobinobiStay || '未回答').slice(0, 12)}...
+                      </span>
+                    </td>
+                    <td style="padding:10px 8px; white-space:nowrap;">${(r.supporterInterest || '').slice(0, 10)}...</td>
+                    <td style="padding:10px 8px; white-space:nowrap;">
+                      ${r.email ? `<span style="color:#0284c7; font-weight:700;"><i class="ph ph-envelope"></i> ${r.email}</span>` : '<span style="color:#94a3b8;">未入力</span>'}
+                    </td>
+                    <td style="padding:10px 8px; text-align:center; white-space:nowrap;">
+                      <button class="btn btn-outline" style="border-color:#0284c7; color:#0284c7; padding:4px 8px; font-size:0.7rem; width:auto; font-weight:700;" onclick="showSurveyDetailModal('${r.id}')">
+                        <i class="ph ph-magnifying-glass"></i> 詳細
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
   }
 
   return `
@@ -3996,7 +5350,7 @@ function AdminView() {
       </div>
 
       <!-- 管理タブナビゲーション -->
-      <div style="display:flex; border-bottom:1px solid #cbd5e1; margin-bottom:16px; background:white; border-radius:8px; overflow:hidden; box-shadow:var(--shadow-sm); flex-wrap:nowrap;">
+      <div style="display:flex; border-bottom:1px solid #cbd5e1; margin-bottom:16px; background:white; border-radius:8px; overflow:hidden; box-shadow:var(--shadow-sm); flex-wrap:nowrap; overflow-x:auto;">
         <div style="${getTabStyle('ranking')}" onclick="setAdminTab('ranking')">
           <i class="ph-fill ph-trophy"></i> ランキング
         </div>
@@ -4011,6 +5365,12 @@ function AdminView() {
         </div>
         <div style="${getTabStyle('audit')}" onclick="setAdminTab('audit')">
           <i class="ph-fill ph-shield-check"></i> 監査ログ
+        </div>
+        <div style="${getTabStyle('accident')}" onclick="setAdminTab('accident')">
+          <i class="ph-fill ph-shield-warning"></i> 事故・損保対応
+        </div>
+        <div style="${getTabStyle('survey')}" onclick="setAdminTab('survey')">
+          <i class="ph-fill ph-chart-pie-slice"></i> アンケート集計 (${(state.surveyResponses || []).length})
         </div>
       </div>
 
@@ -4248,6 +5608,59 @@ function DriverVerificationView() {
           ・幼児同乗時は <strong>ECE R44/04 または R129適合チャイルドシート</strong> の常設が必要です。<br>
           ・毎運行前に <strong>出庫前日常点検</strong> および <strong>アルコール検査（0.00mg/L）</strong> の記録が義務化されます。
         </div>
+
+        <!-- 保険会社代理提出・有責判断の事前同意事項 -->
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px; font-size:0.75rem; color:#1e40af; margin-top:10px;">
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+            <input type="checkbox" checked style="margin-top:2px;" required>
+            <span>
+              <strong>【事故時損保対応・代理提出に関する同意】</strong><br>
+              万が一の送迎中事故が発生した場合、ドライバー様の交渉負担軽減および迅速な保険金請求のため、KidsRide運営管理者が保管する車検証・運行日報・GPS測位ログを提携損害保険会社へ代理提出すること、および有責判断の窓口を本部が担うことに同意します。
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 自転車・徒歩送迎希望者向け：包括保険付帯のご案内 -->
+      <div class="card" style="margin-bottom:24px; border:2px solid #22c55e; background:#f0fdf4;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h3 style="color:#15803d; margin:0; font-size:1.05rem; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-bicycle"></i><i class="ph-fill ph-person-simple-walk"></i> 自転車・徒歩送迎希望者：包括保険の自動付帯
+          </h3>
+          <span style="font-size:0.7rem; background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:4px; font-weight:700;">自動付帯・費用負担なし</span>
+        </div>
+        <p style="font-size:0.8rem; color:#166534; margin-bottom:12px; line-height:1.45;">
+          自転車または徒歩で送迎を担当されるサポーター様には、あいおいニッセイ同和損保<strong>「NPO活動総合保険」</strong>が包括適用されます。個人での個別保険手続きや保険料負担は一切不要です（KidsRide管理本部が全額負担・名簿管理）。
+        </p>
+
+        <!-- 補償内容ハイライト -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; font-size:0.75rem;">
+          <div style="background:white; border:1px solid #bbf7d0; border-radius:6px; padding:8px 10px;">
+            <strong style="color:#15803d; display:block; margin-bottom:2px;">【第三者賠償責任】</strong>
+            歩行中・自転車運転中の接触事故等：<strong style="color:var(--text-main);">最高 2億円</strong>（免責0円）
+          </div>
+          <div style="background:white; border:1px solid #bbf7d0; border-radius:6px; padding:8px 10px;">
+            <strong style="color:#15803d; display:block; margin-bottom:2px;">【サポーター傷害補償】</strong>
+            送迎中・往復途上のケガ：入院<strong style="color:var(--text-main);">2,000円/日</strong>・通院<strong style="color:var(--text-main);">1,000円/日</strong>
+          </div>
+        </div>
+
+        <div style="background:white; border:1px solid #bbf7d0; border-radius:6px; padding:10px; font-size:0.73rem; color:#166534; margin-bottom:10px;">
+          <div style="margin-bottom:3px;"><strong>【安全運行・装備のお願い】</strong></div>
+          ・自転車送迎時は、幼児用同乗器（チャイルドシート）およびヘルメット（SGマーク適合）の着用を徹底してください。<br>
+          ・定期的な自転車点検（ブレーキ・タイヤ空気圧・ライト点灯）を実施してください。
+        </div>
+
+        <!-- 準記名式名簿登載・事故対応の同意 -->
+        <div style="background:#dcfce7; border:1px solid #86efac; border-radius:6px; padding:10px; font-size:0.75rem; color:#14532d;">
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+            <input type="checkbox" checked style="margin-top:2px;" required>
+            <span>
+              <strong>【NPO活動総合保険の適用および名簿登載への同意】</strong><br>
+              本保険（準記名式）の適用を受けるため、KidsRide管理本部の備付会員名簿に氏名・連絡先が登載されること、および万が一の事故発生時にKidsRide本部が損保会社との窓口を担うことに同意します。
+            </span>
+          </label>
+        </div>
       </div>
 
       <button class="btn btn-primary" onclick="showCustomAlert('申請完了', '書類が提出されました。運営の審査が完了するまでしばらくお待ち下さい。', () => navigate('driver-dashboard'))">審査を申し込む処理へ（モック）</button>
@@ -4422,6 +5835,34 @@ function DriverDashboardView() {
         </div>
         <div>
           <span style="background:#dcfce7; color:#166534; padding:6px 12px; border-radius:16px; font-size:0.8rem; font-weight:700;">受託可能</span>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- 🚨 事故・接触トラブル発生時 初動カード ＆ 事故報告（損保連携・必携） -->
+      <!-- ===================================================================== -->
+      <div class="card" style="margin-bottom:20px; border-left:5px solid #ef4444; background:#fff7ed; padding:16px; box-shadow:var(--shadow-md);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px;">
+          <div>
+            <span style="font-size:0.7rem; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px; font-weight:800; display:inline-flex; align-items:center; gap:4px;">
+              <i class="ph-fill ph-warning-octagon"></i> 送迎パートナー必携・緊急時対応
+            </span>
+            <h3 style="margin:6px 0 0 0; font-size:1.05rem; color:#9a3412; font-weight:700; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-shield-warning" style="color:#ea580c;"></i> 事故・接触トラブル時の初動手順
+            </h3>
+          </div>
+          <span style="font-size:0.72rem; color:#c2410c; font-weight:700; background:#ffedd5; padding:3px 6px; border-radius:4px;">自損事故でも必ず警察へ</span>
+        </div>
+        <p style="font-size:0.78rem; color:#7c2d12; margin:0 0 12px 0; line-height:1.45;">
+          万が一の接触や単独事故時は、慌てずに<strong>①負傷者救護 ②警察へ届出(110番) ③本部連絡</strong>を行ってください。保険会社への書類提出や示談交渉はすべてKidsRide本部が窓口となり代行いたします。
+        </p>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" style="flex:1; background:#ef4444; color:white; font-size:0.8rem; padding:9px 12px; font-weight:700; border:none; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 4px rgba(239,68,68,0.3);" onclick="showDriverIncidentCardModal()">
+            <i class="ph-fill ph-cards"></i> 初動アクションカード
+          </button>
+          <button class="btn" style="flex:1; background:white; color:#c2410c; border:1.5px solid #ea580c; font-size:0.8rem; padding:9px 12px; font-weight:700; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:6px;" onclick="showAccidentReportModal()">
+            <i class="ph-fill ph-file-plus"></i> 事故報告書を提出
+          </button>
         </div>
       </div>
 
@@ -4665,6 +6106,10 @@ function render() {
 
 
   switch(state.currentRoute) {
+    case 'survey':
+      appContainer.innerHTML = SurveyView();
+      window.scrollTo(0, 0);
+      break;
     case 'facility-admin':
       appContainer.innerHTML = FacilityAdminView();
       break;
@@ -4982,12 +6427,781 @@ window.addToAppleCalendar = function() {
   showCustomAlert('iPhoneカレンダー連携', '送迎予定のiCalendar (.ics) ファイルを生成しました！\nダウンロードを開いてカレンダーに追加してください。');
 };
 
-// 管理者ポータル用 URL判定（サイト上には明記せず、共有URL・ハッシュからのみアクセス可能）
-function checkAdminRouteFromUrl() {
-  const hash = (window.location.hash || '').toLowerCase();
-  const search = (window.location.search || '').toLowerCase();
-  if (hash === '#admin' || hash === '#/admin' || hash === '#admin-portal' || search.includes('view=admin') || search.includes('portal=admin')) {
-    state.currentRoute = 'admin';
+// ============================================================================
+// 🚨 事故対応オペレーション・損保（損保ジャパン）連携 モーダル機能群
+// ============================================================================
+
+// 1. 送迎ドライバー向け 事故発生時アクションカード（初動必携マニュアル）
+window.showDriverIncidentCardModal = function() {
+  const existing = document.getElementById('driver-incident-card-modal');
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div id="driver-incident-card-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.7); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; z-index:9999; opacity:0; transition:opacity 0.25s ease;">
+      <div style="background:white; width:94%; max-width:480px; padding:20px; border-radius:16px; box-shadow:var(--shadow-xl); transform:scale(0.92); transition:transform 0.25s ease; max-height:92vh; overflow-y:auto; border-top:6px solid #ef4444;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #fee2e2; padding-bottom:8px;">
+          <div>
+            <span style="font-size:0.7rem; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px; font-weight:800;">送迎パートナー必携</span>
+            <h3 style="margin:4px 0 0 0; color:#991b1b; font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-shield-warning" style="color:#ef4444;"></i> 事故発生時 初動アクションカード
+            </h3>
+          </div>
+          <button onclick="document.getElementById('driver-incident-card-modal').remove()" style="background:none; border:none; font-size:1.5rem; color:#94a3b8; cursor:pointer;">×</button>
+        </div>
+
+        <!-- 自損事故警察届出の最重要警告バナー -->
+        <div style="background:#fef2f2; border:2px solid #ef4444; border-radius:8px; padding:10px 12px; margin-bottom:14px; text-align:left;">
+          <strong style="color:#b91c1c; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-warning-octagon" style="font-size:1.1rem;"></i> 【最重要】自損事故でも必ず警察へ届出！
+          </strong>
+          <span style="font-size:0.74rem; color:#7f1d1d; display:block; margin-top:3px; line-height:1.45;">
+            電柱やガードレールへの接触、脱輪などの単独事故であっても、<strong>警察への届出（110番）がないと「サービス中の事故証明」が発行されず、保険金請求が認められない場合があります。</strong>
+          </span>
+        </div>
+
+        <!-- 緊急ワンタップ通話ボタン グリッド -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;">
+          <a href="tel:110" style="text-decoration:none; background:#1e3a8a; color:white; padding:10px; border-radius:8px; text-align:center; font-weight:800; font-size:0.85rem; display:flex; flex-direction:column; align-items:center; gap:2px; box-shadow:var(--shadow-sm);">
+            <i class="ph-fill ph-police-car" style="font-size:1.4rem;"></i>
+            <span>警察へ通報 (110)</span>
+            <span style="font-size:0.65rem; opacity:0.85;">事故証明の取得必須</span>
+          </a>
+          <a href="tel:119" style="text-decoration:none; background:#dc2626; color:white; padding:10px; border-radius:8px; text-align:center; font-weight:800; font-size:0.85rem; display:flex; flex-direction:column; align-items:center; gap:2px; box-shadow:var(--shadow-sm);">
+            <i class="ph-fill ph-first-aid" style="font-size:1.4rem;"></i>
+            <span>救急・消防 (119)</span>
+            <span style="font-size:0.65rem; opacity:0.85;">ケガ人の救護最優先</span>
+          </a>
+        </div>
+
+        <!-- KidsRide 本部緊急ホットライン（窓口一本化） -->
+        <a href="tel:07022511896" style="text-decoration:none; background:#ea580c; color:white; padding:12px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; box-shadow:var(--shadow-sm);">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-phone-call" style="font-size:1.6rem;"></i>
+            <div style="text-align:left;">
+              <span style="font-size:0.7rem; opacity:0.9; display:block;">KidsRide 運行統括本部 事故受付ホットライン</span>
+              <strong style="font-size:1rem;">070-2251-1896 (担当: 七夕)</strong>
+            </div>
+          </div>
+          <span style="background:white; color:#ea580c; padding:4px 10px; border-radius:4px; font-size:0.75rem; font-weight:800;">発信</span>
+        </a>
+
+        <!-- 保険会社直接連絡禁止 ＆ 窓口代行ガイダンス -->
+        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.72rem; color:#1e40af; line-height:1.45;">
+          <strong style="display:flex; align-items:center; gap:4px; color:#1d4ed8; font-size:0.76rem; margin-bottom:2px;">
+            <i class="ph-fill ph-shield-check"></i> 【保険会社への直接連絡は不要です】
+          </strong>
+          あいおいニッセイ同和損保の規定により、<strong>ドライバー様が直接保険会社へ事故連絡することは禁止されています。</strong> すべてKidsRide本部が窓口となり、示談交渉・書類提出・損保連絡を代行いたしますのでご安心ください。
+        </div>
+
+        <!-- 現場初動 5箇条 チェックリスト -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:16px; font-size:0.78rem; text-align:left;">
+          <strong style="color:var(--text-main); font-size:0.82rem; display:block; margin-bottom:8px;">現場での初動 5つのステップ</strong>
+          
+          <div style="margin-bottom:8px; display:flex; gap:6px;">
+            <span style="background:#3b82f6; color:white; font-size:0.68rem; font-weight:800; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">1</span>
+            <span><strong>ケガ人の救護・安全確保</strong>: お子様の安否を最優先確認。路肩などの安全な場所へ移動。</span>
+          </div>
+
+          <div style="margin-bottom:8px; display:flex; gap:6px;">
+            <span style="background:#3b82f6; color:white; font-size:0.68rem; font-weight:800; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">2</span>
+            <span>
+              <strong>警察（110番）へ連絡</strong>: 現場で警察官を呼ぶ。<br>
+              <span style="font-size:0.72rem; color:#15803d; font-weight:600;">※警察署名・担当官名・事故番号はその場で分からなくても警察通報が済んでいればOK（発生場所から保険会社側で特定可能）</span>
+            </span>
+          </div>
+
+          <div style="margin-bottom:8px; display:flex; gap:6px;">
+            <span style="background:#3b82f6; color:white; font-size:0.68rem; font-weight:800; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">3</span>
+            <span><strong>KidsRide本部へ電話一報</strong>: 保護者様への連絡や代行手配を管理者が直ちに行います。</span>
+          </div>
+
+          <div style="margin-bottom:8px; display:flex; gap:6px;">
+            <span style="background:#3b82f6; color:white; font-size:0.68rem; font-weight:800; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">4</span>
+            <span><strong>相手方情報 ＆ 現場写真の記録</strong>: 相手の氏名・TEL・車両ナンバー・保険会社を確認。スマホで損傷箇所と現場全景を3〜5枚撮影。</span>
+          </div>
+
+          <div style="display:flex; gap:6px;">
+            <span style="background:#ef4444; color:white; font-size:0.68rem; font-weight:800; border-radius:50%; width:16px; height:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">!</span>
+            <span style="color:#b91c1c;"><strong>その場での示談・口約束は厳禁</strong>: 「保険会社とKidsRide本部を通じて正式に対応します」とお伝えください。</span>
+          </div>
+        </div>
+
+        <!-- 補償特約ルール＆免責事項（あいおいニッセイ同和損保） -->
+        <div style="background:#fefce8; border:1px solid #fef08a; border-radius:8px; padding:10px 12px; margin-bottom:14px; font-size:0.7rem; color:#713f12; line-height:1.45;">
+          <strong style="color:#854d0e; display:block; margin-bottom:2px;">【KidsRide包括保険特約の補償範囲・注意事項】</strong>
+          ・<strong>補償内容:</strong> 対人無制限 / 対物無制限 / 人身傷害1名3,000万円（同乗児童・運転者）<br>
+          ・<strong>自車の車両保険・代車費用は対象外:</strong> ご自身の車両修理費や代車費用は本保険に含まれません。登録自動車の任意保険は必ず継続加入をお願いいたします。<br>
+          ・<strong>補償区間:</strong> 自宅等の出発〜帰着までが対象です。私用や著しい遠回り等、通常経路を逸脱した寄り道中の事故は補償されません。
+        </div>
+
+        <button class="btn btn-primary" style="width:100%; padding:10px; font-size:0.85rem; font-weight:700; background:#ea580c; border:none;" onclick="document.getElementById('driver-incident-card-modal').remove(); showAccidentReportModal();">
+          <i class="ph ph-file-plus"></i> 事故報告書を入力・送信する
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = document.getElementById('driver-incident-card-modal');
+  const content = modal.querySelector('div');
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    content.style.transform = 'scale(1)';
+  }, 10);
+};
+
+// 2. 事故報告書 入力・送信フォームモーダル（平様指定の全項目網羅）
+window.showAccidentReportModal = function(reportId = null) {
+  const existing = document.getElementById('accident-report-modal');
+  if (existing) existing.remove();
+
+  const report = reportId ? (state.accidentReports || []).find(r => r.reportId === reportId) : null;
+  const nowStr = new Date().toLocaleString('ja-JP', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(/\//g, '/');
+
+  const modalHtml = `
+    <div id="accident-report-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.7); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; z-index:9999; opacity:0; transition:opacity 0.25s ease;">
+      <div style="background:white; width:94%; max-width:520px; padding:22px; border-radius:16px; box-shadow:var(--shadow-xl); transform:scale(0.92); transition:transform 0.25s ease; max-height:92vh; overflow-y:auto;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:8px;">
+          <div>
+            <span style="font-size:0.7rem; background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:4px; font-weight:800;">損保提出用 集約フォーム</span>
+            <h3 style="margin:4px 0 0 0; color:var(--text-main); font-size:1.15rem; font-weight:800; display:flex; align-items:center; gap:6px;">
+              <i class="ph-fill ph-file-text" style="color:#ea580c;"></i> 事故・接触トラブル報告書
+            </h3>
+          </div>
+          <button onclick="document.getElementById('accident-report-modal').remove()" style="background:none; border:none; font-size:1.5rem; color:#94a3b8; cursor:pointer;">×</button>
+        </div>
+
+        <form id="accident-report-form" onsubmit="window.submitAccidentReport(event)">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div class="form-group">
+              <label style="font-size:0.75rem; font-weight:700;">発生日時 *</label>
+              <input type="text" id="acc-date" class="form-control" style="font-size:0.8rem; padding:6px 8px;" value="${report ? report.date : nowStr}" required>
+            </div>
+            <div class="form-group">
+              <label style="font-size:0.75rem; font-weight:700;">運転者氏名 *</label>
+              <input type="text" id="acc-driver" class="form-control" style="font-size:0.8rem; padding:6px 8px;" value="${report ? report.driverName : (state.driverVehicle ? '佐藤 カズヤ' : '')}" required>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div class="form-group">
+              <label style="font-size:0.75rem; font-weight:700;">車両登録番号 (ナンバー) *</label>
+              <input type="text" id="acc-plate" class="form-control" style="font-size:0.8rem; padding:6px 8px;" value="${report ? report.plateNumber : (state.driverVehicle?.plateNumber || '多摩 501 さ 38-25')}" required>
+            </div>
+            <div class="form-group">
+              <label style="font-size:0.75rem; font-weight:700;">車種名 *</label>
+              <input type="text" id="acc-model" class="form-control" style="font-size:0.8rem; padding:6px 8px;" value="${report ? report.vehicleModel : (state.driverVehicle?.model || 'トヨタ シエンタ')}" required>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:0.75rem; font-weight:700;">事故発生場所 (詳細住所・交差点名・目印) *</label>
+            <input type="text" id="acc-location" class="form-control" style="font-size:0.8rem; padding:6px 8px;" placeholder="例: 三鷹市大沢2丁目 交差点手前10m付近" value="${report ? report.location : ''}" required>
+          </div>
+
+          <!-- 警察届出セクション -->
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px; margin-bottom:12px;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-main); margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+              <i class="ph-fill ph-police-car" style="color:#1e3a8a;"></i> 警察への届出（自損事故でも必須） *
+            </div>
+            <div style="font-size:0.68rem; color:#15803d; margin-bottom:6px; line-height:1.4;">
+              ※110番通報が済んでいれば、警察署名や事故番号が未定・不明でも送信可能です（発生場所から保険会社側で管轄署を特定可能）。
+            </div>
+            <div style="display:flex; gap:12px; margin-bottom:8px; font-size:0.8rem;">
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="radio" name="acc-police" value="yes" ${!report || report.policeReported ? 'checked' : ''} required> 届出済 (110番対応)
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="radio" name="acc-police" value="no" ${report && !report.policeReported ? 'checked' : ''}> 未届出 (至急110番通報が必要)
+              </label>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <input type="text" id="acc-police-station" class="form-control" style="font-size:0.75rem; padding:5px 8px;" placeholder="届出警察署 (分かれば記入)" value="${report ? report.policeStation : '警視庁 三鷹警察署'}">
+              <input type="text" id="acc-police-officer" class="form-control" style="font-size:0.75rem; padding:5px 8px;" placeholder="担当官 / 事故番号 (空欄でも可)" value="${report ? report.policeOfficer || report.incidentNumber : ''}">
+            </div>
+          </div>
+
+          <!-- 相手方情報 -->
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:10px; margin-bottom:12px;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--text-main); margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+              <i class="ph-fill ph-user-circle"></i> 相手方情報 (自損事故の場合は空欄または自損と記入)
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:6px;">
+              <input type="text" id="acc-opponent-name" class="form-control" style="font-size:0.75rem; padding:5px 8px;" placeholder="相手氏名 (自損時は「なし」)" value="${report ? report.opponentName : ''}">
+              <input type="text" id="acc-opponent-phone" class="form-control" style="font-size:0.75rem; padding:5px 8px;" placeholder="相手連絡先 (電話番号)" value="${report ? report.opponentPhone : ''}">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <input type="text" id="acc-opponent-plate" class="form-control" style="font-size:0.75rem; padding:5px 8px;" placeholder="相手ナンバー・車種" value="${report ? report.opponentPlate : ''}">
+              <input type="text" id="acc-opponent-ins" class="form-control" style="font-size:0.75rem; padding:5px 8px;" placeholder="相手任意保険会社" value="${report ? report.opponentInsurance : ''}">
+            </div>
+          </div>
+
+          <!-- 損傷・怪我 -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div class="form-group">
+              <label style="font-size:0.75rem; font-weight:700;">自車の損傷箇所 *</label>
+              <input type="text" id="acc-damage-self" class="form-control" style="font-size:0.8rem; padding:6px 8px;" placeholder="例: 左フロントバンパー擦り傷" value="${report ? report.damageSelf : ''}" required>
+            </div>
+            <div class="form-group">
+              <label style="font-size:0.75rem; font-weight:700;">児童・同乗者の怪我有無 *</label>
+              <input type="text" id="acc-injury" class="form-control" style="font-size:0.8rem; padding:6px 8px;" value="${report ? report.childInjured : 'なし（負傷なし確認済）'}" required>
+            </div>
+          </div>
+
+          <!-- 詳細状況 -->
+          <div class="form-group" style="margin-bottom:12px;">
+            <label style="font-size:0.75rem; font-weight:700;">詳細な事故状況・原因 *</label>
+            <textarea id="acc-desc" class="form-control" style="font-size:0.8rem; padding:8px; height:70px; resize:none;" placeholder="事故の経緯、道路状況、天候、信号などを具体的に記入してください。" required>${report ? report.description : ''}</textarea>
+          </div>
+
+          <!-- 写真添付ダミーUI -->
+          <div style="border:1.5px dashed #cbd5e1; border-radius:8px; padding:12px; text-align:center; background:#f8fafc; cursor:pointer; margin-bottom:16px;" onclick="showCustomAlert('写真選択', 'デバイスのカメラまたは写真ライブラリから損傷箇所や事故現場の写真をアップロードできます（デモ用）')">
+            <i class="ph ph-camera" style="font-size:1.6rem; color:#94a3b8;"></i>
+            <div style="font-size:0.78rem; font-weight:700; color:var(--text-main); margin-top:2px;">損傷箇所・現場写真の添付 (3〜5枚推奨)</div>
+            <div style="font-size:0.68rem; color:var(--text-muted);">自車・相手車両・道路全景の画像</div>
+          </div>
+
+          <div style="display:flex; gap:8px;">
+            <button type="button" class="btn btn-outline" style="flex:1; padding:9px; font-size:0.85rem;" onclick="document.getElementById('accident-report-modal').remove()">
+              キャンセル
+            </button>
+            <button type="submit" class="btn btn-primary" style="flex:2; padding:9px; font-size:0.85rem; font-weight:700; background:#ea580c; border:none;">
+              <i class="ph ph-paper-plane-right"></i> 事故報告書を提出する
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = document.getElementById('accident-report-modal');
+  const content = modal.querySelector('div');
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    content.style.transform = 'scale(1)';
+  }, 10);
+};
+
+// 3. 事故報告書 送信ハンドラー
+window.submitAccidentReport = function(event) {
+  event.preventDefault();
+
+  const isPolice = document.querySelector('input[name="acc-police"]:checked')?.value === 'yes';
+  const newReport = {
+    reportId: 'ACC-' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '-' + Math.floor(10 + Math.random()*90),
+    recordId: state.transportRecords[0]?.recordId || 'TR-20260825-01',
+    date: document.getElementById('acc-date').value,
+    driverName: document.getElementById('acc-driver').value,
+    driverPhone: '090-1234-5678',
+    vehicleModel: document.getElementById('acc-model').value,
+    plateNumber: document.getElementById('acc-plate').value,
+    vehicleOwner: document.getElementById('acc-driver').value + ' (自己所有自家用車)',
+    location: document.getElementById('acc-location').value,
+    weather: '晴れ / 良好',
+    policeReported: isPolice,
+    policeStation: document.getElementById('acc-police-station').value || '三鷹警察署',
+    policeOfficer: document.getElementById('acc-police-officer').value || '交通捜査係',
+    incidentNumber: '交-受理済',
+    opponentName: document.getElementById('acc-opponent-name').value || 'なし (自損事故)',
+    opponentPhone: document.getElementById('acc-opponent-phone').value || '',
+    opponentPlate: document.getElementById('acc-opponent-plate').value || '',
+    opponentInsurance: document.getElementById('acc-opponent-ins').value || '',
+    damageSelf: document.getElementById('acc-damage-self').value,
+    damageOpponent: '相手方損傷またはなし',
+    childInjured: document.getElementById('acc-injury').value,
+    driverInjured: 'なし',
+    description: document.getElementById('acc-desc').value,
+    status: '受付済',
+    submittedToInsuranceDate: '本日 受付済 (損保提出準備中)',
+    handlingAgency: '株式会社 保険あっとなびプラネット (担当: 平 恭子 様)'
+  };
+
+  if (!state.accidentReports) state.accidentReports = [];
+  state.accidentReports.unshift(newReport);
+  localStorage.setItem('kidsride_accident_reports', JSON.stringify(state.accidentReports));
+
+  // 監査ログに記録
+  if (state.auditLogs) {
+    state.auditLogs.unshift({
+      id: 'LOG-ACC-' + Date.now().toString().slice(-4),
+      timestamp: new Date().toLocaleString('ja-JP'),
+      adminId: 'system',
+      adminName: 'KidsRide 安全運行管理システム',
+      action: 'ACCIDENT_REPORT_SUBMITTED',
+      target: `${newReport.reportId} (${newReport.driverName} - ${newReport.plateNumber})`,
+      ip: 'ドライバー端末認証セッション',
+      details: `事故報告書を受理。警察届出: ${isPolice ? '済' : '未'}。損保連携タスクを生成。`
+    });
+    localStorage.setItem('kidsride_audit_logs', JSON.stringify(state.auditLogs));
+  }
+
+  const modal = document.getElementById('accident-report-modal');
+  if (modal) modal.remove();
+
+  render();
+
+  showCustomAlert(
+    '報告完了',
+    '事故報告書がKidsRide本部に正常送信されました。\n\n【今後の流れ】\nKidsRide管理者が本報告書、アプリ輸送記録、保管済み車検証をセットにして保険会社（損保ジャパン損害サービスセンター・平様）へ代理提出し、示談交渉および手続きを代行いたします。'
+  );
+};
+
+// 4. 損保サービスセンター提出用 輸送記録・事故証明書 印刷プレビューモーダル
+window.showAccidentProofModal = function(reportId) {
+  const existing = document.getElementById('accident-proof-modal');
+  if (existing) existing.remove();
+
+  const report = (state.accidentReports || []).find(r => r.reportId === reportId) || state.accidentReports[0];
+  const tr = (state.transportRecords || []).find(t => t.recordId === report?.recordId) || state.transportRecords[0];
+  const v = state.driverVehicle;
+
+  const modalHtml = `
+    <div id="accident-proof-modal" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.75); backdrop-filter:blur(5px); display:flex; align-items:center; justify-content:center; z-index:9999; opacity:0; transition:opacity 0.25s ease;">
+      <div style="background:white; width:95%; max-width:680px; padding:28px 24px; border-radius:12px; box-shadow:var(--shadow-xl); transform:scale(0.92); transition:transform 0.25s ease; max-height:94vh; overflow-y:auto; font-family:'Noto Sans JP', sans-serif;">
+        
+        <!-- アクションバー（画面用） -->
+        <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+          <div>
+            <span style="font-size:0.75rem; background:#e0f2fe; color:#0369a1; padding:3px 10px; border-radius:4px; font-weight:800;">損害サービスセンター提出用 公式様式</span>
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">株式会社 保険あっとなびプラネット 平様 窓口提出資料</div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" style="background:#1e3a8a; border:none; padding:7px 14px; font-size:0.8rem; font-weight:700; display:flex; align-items:center; gap:6px;" onclick="window.print()">
+              <i class="ph ph-printer"></i> 印刷 / PDF保存
+            </button>
+            <button onclick="document.getElementById('accident-proof-modal').remove()" style="background:#f1f5f9; border:none; border-radius:6px; padding:6px 12px; font-size:0.9rem; color:var(--text-muted); cursor:pointer;">閉じる</button>
+          </div>
+        </div>
+
+        <!-- 証明書本紙スタイル (A4印刷対応) -->
+        <div id="printable-proof-sheet" style="padding:10px; color:#0f172a; line-height:1.5;">
+          
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; border-bottom:2px solid #0f172a; padding-bottom:12px;">
+            <div>
+              <div style="font-size:0.75rem; color:#475569; letter-spacing:1px;">一般社団法人 KidsRide 運行統括本部</div>
+              <h2 style="margin:4px 0 0 0; font-size:1.35rem; font-weight:900; color:#0f172a; letter-spacing:1px;">
+                移動支援サービス運行証明書 兼 事故時輸送記録書
+              </h2>
+            </div>
+            <div style="text-align:right; font-size:0.75rem; color:#475569;">
+              <div>証明書番号: <strong>KR-CERT-${report ? report.reportId : '20260825'}</strong></div>
+              <div>発行日時: ${new Date().toLocaleDateString('ja-JP')}</div>
+              <div>提出先: あいおいニッセイ同和損害保険株式会社 損害サービスセンター</div>
+              <div style="font-size:0.7rem; color:#475569;">取扱代理店: 株式会社 保険あっとなびプラネット東京西 (担当: 平 恭子 様)</div>
+              <div style="color:#15803d; font-weight:700;">※包括特約合意済（自社システム出力帳票にて正式受理）</div>
+            </div>
+          </div>
+
+          <p style="font-size:0.8rem; margin-bottom:14px;">
+            本状は、当プラットフォームに登録された送迎パートナーが、児童送迎の移動支援運行時間内において発生した事故であることを、システム保管データ（日常点検・アルコール検査・GPS測位ログ）に基づき正式に証明・報告するものです。
+          </p>
+
+          <!-- 1. 運行基本情報（輸送記録） -->
+          <div style="margin-bottom:14px;">
+            <div style="background:#f1f5f9; padding:4px 8px; font-weight:800; font-size:0.8rem; border-left:4px solid #1e3a8a; margin-bottom:6px;">
+              1. 運行日報および移動支援サービス記録（道路運送法準拠）
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:0.75rem; border:1px solid #cbd5e1;">
+              <tbody>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; width:22%; font-weight:700;">運行記録ID</td>
+                  <td style="padding:6px 8px; width:28%; font-weight:600;">${tr.recordId}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; width:22%; font-weight:700;">運行実施日</td>
+                  <td style="padding:6px 8px; width:28%;">${tr.date} (${tr.type})</td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">運行時間枠</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#1e3a8a;">${tr.timeSlot}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">運行ステータス</td>
+                  <td style="padding:6px 8px; font-weight:700; color:#15803d;">サービス提供中（GPSログ照合済）</td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">出発地 (乗車地)</td>
+                  <td style="padding:6px 8px;">${tr.departure}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">目的地 (降車地)</td>
+                  <td style="padding:6px 8px;">${tr.destination}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">送迎児童名</td>
+                  <td style="padding:6px 8px; font-weight:700;">${tr.childName}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">保護者名</td>
+                  <td style="padding:6px 8px;">${tr.parentName}</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">実走行距離 / 実費</td>
+                  <td style="padding:6px 8px;">${tr.distanceKm} km (ガソリン実費: ¥${tr.actualCost}・利益0円)</td>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">安全点検・アルコール</td>
+                  <td style="padding:6px 8px;">点検良好 / 呼気0.00mg/L (出庫前測定完了)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 2. 車両・運転者情報 -->
+          <div style="margin-bottom:14px;">
+            <div style="background:#f1f5f9; padding:4px 8px; font-weight:800; font-size:0.8rem; border-left:4px solid #1e3a8a; margin-bottom:6px;">
+              2. 事故車両および運転者情報（車検証データ保管済）
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:0.75rem; border:1px solid #cbd5e1;">
+              <tbody>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; width:22%; font-weight:700;">運転者氏名</td>
+                  <td style="padding:6px 8px; width:28%; font-weight:700;">${report ? report.driverName : '佐藤 カズヤ'}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; width:22%; font-weight:700;">連絡先</td>
+                  <td style="padding:6px 8px; width:28%;">${report ? report.driverPhone : '090-1234-5678'}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">自動車登録番号</td>
+                  <td style="padding:6px 8px; font-weight:800; color:#0f172a;">${report ? report.plateNumber : v.plateNumber}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">車名・型式</td>
+                  <td style="padding:6px 8px;">${report ? report.vehicleModel : v.model}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">車両所有者</td>
+                  <td style="padding:6px 8px;">${report ? report.vehicleOwner : '佐藤 カズヤ (自己所有自家用車)'}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">車検証添付</td>
+                  <td style="padding:6px 8px; color:#15803d; font-weight:700;">【添付済】審査時データ照合適合</td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">加入任意保険</td>
+                  <td colspan="3" style="padding:6px 8px;">${v.voluntaryInsurance} (対人対物無制限・人身傷害付帯)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 3. 事故状況および警察届出状況 -->
+          <div style="margin-bottom:14px;">
+            <div style="background:#f1f5f9; padding:4px 8px; font-weight:800; font-size:0.8rem; border-left:4px solid #ea580c; margin-bottom:6px;">
+              3. 事故発生状況 ＆ 警察届出情報（有無責判断資料）
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:0.75rem; border:1px solid #cbd5e1;">
+              <tbody>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; width:22%; font-weight:700;">事故発生日時</td>
+                  <td style="padding:6px 8px; width:28%; font-weight:700; color:#b91c1c;">${report ? report.date : ''}</td>
+                  <td style="padding:6px 8px; background:#f8fafc; width:22%; font-weight:700;">天候・路面</td>
+                  <td style="padding:6px 8px; width:28%;">${report ? report.weather : '晴れ / 乾燥'}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">事故発生場所</td>
+                  <td colspan="3" style="padding:6px 8px; font-weight:700;">${report ? report.location : ''}</td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">警察届出情報</td>
+                  <td colspan="3" style="padding:6px 8px;">
+                    <strong style="color:#15803d;"><i class="ph-fill ph-check-circle"></i> 警察届出済 (110番対応)</strong><br>
+                    届出先: <strong>${report ? report.policeStation : '警視庁 三鷹警察署'}</strong> (担当: ${report ? report.policeOfficer : ''} / 受理番号: ${report ? report.incidentNumber : ''})
+                  </td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">相手方情報</td>
+                  <td colspan="3" style="padding:6px 8px;">
+                    氏名: <strong>${report ? report.opponentName : 'なし (単独自損事故)'}</strong> 
+                    ${report?.opponentPlate ? ` / ナンバー: <strong>${report.opponentPlate}</strong>` : ''}
+                    ${report?.opponentInsurance ? ` / 保険会社: <strong>${report.opponentInsurance}</strong>` : ''}
+                  </td>
+                </tr>
+                <tr style="border-bottom:1px solid #cbd5e1;">
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">損傷状況</td>
+                  <td colspan="3" style="padding:6px 8px;">
+                    自車: <strong>${report ? report.damageSelf : ''}</strong><br>
+                    相手車: <strong>${report ? report.damageOpponent : 'なし'}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:6px 8px; background:#f8fafc; font-weight:700;">事故の詳細状況</td>
+                  <td colspan="3" style="padding:8px; line-height:1.45;">${report ? report.description : ''}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 署名捺印欄 -->
+          <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="font-size:0.7rem; color:#64748b; line-height:1.4;">
+              引受保険会社: あいおいニッセイ同和損害保険株式会社<br>
+              取扱代理店: 株式会社 保険あっとなびプラネット東京西（担当: 平 恭子 様）<br>
+              連絡先: 042-481-5203 / 070-2251-1896<br>
+              ※本証明書はKidsRideプラットフォーム暗号化ログに基づき電子的に認証されています。
+            </div>
+            <div style="border:1.5px solid #334155; padding:8px 16px; border-radius:4px; text-align:center; min-width:180px;">
+              <div style="font-size:0.68rem; color:#475569;">一般社団法人 KidsRide</div>
+              <div style="font-size:0.85rem; font-weight:800; color:#0f172a; margin-top:2px;">代表理事 / 統括管理者 印</div>
+              <div style="font-size:0.65rem; color:#94a3b8; margin-top:4px;">[電子認証済 OFFICIAL STAMP]</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modal = document.getElementById('accident-proof-modal');
+  const content = modal.querySelector('div');
+  setTimeout(() => {
+    modal.style.opacity = '1';
+    content.style.transform = 'scale(1)';
+  }, 10);
+};
+
+// 5. あいおいニッセイ同和損保 提出用 月次運行実績CSVエクスポート（90円×h精算用）
+window.exportMonthlyInsuranceCSV = function() {
+  const records = state.transportRecords || [];
+  if (records.length === 0) {
+    showCustomAlert('データなし', '出力対象の運行実績データがありません。');
+    return;
+  }
+
+  // あいおいニッセイ同和損保 提出用 月次稼働実績フォーマット
+  const headers = [
+    '運行記録ID',
+    '運行日',
+    '運行種別',
+    '担当ドライバー',
+    '車両登録番号',
+    '出発地',
+    '目的地',
+    '運行時間枠',
+    '想定稼働時間(h)',
+    '送迎児童名',
+    '保護者名',
+    '実走行距離(km)',
+    '公認ガソリン実費(円)',
+    '保険料計算単価(円/h)',
+    '当運行保険料(円)'
+  ];
+
+  const rows = records.map(r => {
+    const hours = 1; // 1運行あたり1時間単位
+    const rate = 90; // 90円/h
+    const insuranceFee = hours * rate;
+
+    return [
+      `"${r.recordId}"`,
+      `"${r.date}"`,
+      `"${r.type}"`,
+      `"佐藤 カズヤ"`,
+      `"${state.driverVehicle?.plateNumber || '多摩 501 さ 38-25'}"`,
+      `"${r.departure}"`,
+      `"${r.destination}"`,
+      `"${r.timeSlot}"`,
+      hours,
+      `"${r.childName}"`,
+      `"${r.parentName}"`,
+      r.distanceKm,
+      r.actualCost,
+      rate,
+      insuranceFee
+    ].join(',');
+  });
+
+  const totalFee = records.length * 90;
+  const summaryRow = `\r\n"【月次合計サマリー】","総運行件数: ${records.length}件","","","","","","","合計稼働時間: ${records.length}時間","","","","","精算予定保険料合計:","¥${totalFee.toLocaleString()}"`;
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows, summaryRow].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `KidsRide_あいおい損保月次実績報告_${new Date().toISOString().slice(0, 7)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // 監査ログに記録
+  if (state.auditLogs) {
+    state.auditLogs.unshift({
+      id: 'LOG-INS-' + Date.now().toString().slice(-4),
+      timestamp: new Date().toLocaleString('ja-JP'),
+      adminId: 'admin',
+      adminName: state.currentAdmin ? state.currentAdmin.name : '統括管理者',
+      action: 'EXPORT_CSV',
+      target: 'あいおいニッセイ同和損保 月次実績報告書',
+      ip: '192.168.1.104',
+      details: `月次運行実績データ(${records.length}件、精算額: ¥${totalFee})をCSV出力。平様提出用。`
+    });
+    localStorage.setItem('kidsride_audit_logs', JSON.stringify(state.auditLogs));
+  }
+
+  showCustomAlert(
+    '出力完了',
+    `あいおいニッセイ同和損保 提出用の月次実績CSV（${records.length}件・精算予定額: ¥${totalFee.toLocaleString()}）を出力しました。\n平様から提供された月次通知シートに転記または添付してご提出ください。`
+  );
+};
+
+// 6. あいおいニッセイ同和損保「NPO活動総合保険」準記名式 備付会員名簿CSVエクスポート
+window.exportNpoInsuranceRosterCSV = function() {
+  const registrants = state.allRegistrants || [];
+  // 送迎会員（driver / both）および役職員を抽出
+  const supporters = registrants.filter(u => u.role === 'driver' || u.role === 'both');
+  
+  if (supporters.length === 0) {
+    showCustomAlert('対象者なし', '名簿出力対象の送迎サポーター・会員データが存在しません。');
+    return;
+  }
+
+  // あいおいニッセイ同和損保「NPO活動総合保険」準記名式 備付名簿ヘッダー
+  const headers = [
+    '名簿管理番号',
+    '氏名',
+    '会員種別',
+    '送迎担当区分',
+    '生年月日/年代',
+    '電話番号',
+    '連絡先メール',
+    '居住地域',
+    '所属園・活動拠点',
+    '名簿登載日(登録承認日)',
+    '適用保険プラン',
+    '賠償補償(対人対物)',
+    '傷害補償(入院/通院)',
+    '保険適用ステータス'
+  ];
+
+  const rows = supporters.map((s, index) => {
+    const isCar = s.hasVehicle || s.vehiclePlate;
+    const transportType = isCar ? '車送迎（自動車包括特約併用）' : (s.id === 'd_kazuya' ? '自転車送迎' : '自転車・徒歩送迎');
+    const roleLabel = s.role === 'both' ? '送迎兼保護者会員' : '送迎協力会員（ボランティア）';
+
+    return [
+      `"KR-MBR-${String(index + 1).padStart(4, '0')}"`,
+      `"${s.name}"`,
+      `"${roleLabel}"`,
+      `"${transportType}"`,
+      `"${s.ageGroup || '30代'}"`,
+      `"${s.phone || '090-XXXX-XXXX'}"`,
+      `"${s.email || 'user@example.com'}"`,
+      `"${s.address || '東京都三鷹市'}"`,
+      `"${s.facility || '三鷹市立大沢保育園'}"`,
+      `"${s.registeredDate || '2026-09-01'}"`,
+      `"あいおいニッセイ同和損保 NPO活動総合保険"`,
+      `"最高2億円 (免責0円)"`,
+      `"入院2,000円/日・通院1,000円/日"`,
+      `"有効（包括付帯済）"`
+    ].join(',');
+  });
+
+  const summary = `\r\n"【名簿備付証明】","KidsRide管理本部 備付名簿","対象者数: ${supporters.length}名","","","","","","","備付作成日: ${new Date().toISOString().slice(0, 10)}","※準記名式のため損保への事前提出不要・本部保管義務対応","","",""`;
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows, summary].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `KidsRide_NPO活動保険_準記名式備付名簿_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // 監査ログに記録
+  if (state.auditLogs) {
+    state.auditLogs.unshift({
+      id: 'LOG-NPO-' + Date.now().toString().slice(-4),
+      timestamp: new Date().toLocaleString('ja-JP'),
+      adminId: 'admin',
+      adminName: state.currentAdmin ? state.currentAdmin.name : '統括管理者',
+      action: 'EXPORT_CSV',
+      target: 'NPO活動総合保険 準記名式 備付名簿',
+      ip: '192.168.1.104',
+      details: `自転車・徒歩送迎サポーター備付名簿(${supporters.length}名)をCSV出力。あいおい損保 準記名式要件対応。`
+    });
+    localStorage.setItem('kidsride_audit_logs', JSON.stringify(state.auditLogs));
+  }
+
+  showCustomAlert(
+    '備付名簿 出力完了',
+    `あいおいニッセイ同和損保「NPO活動総合保険」の契約要件である【準記名式 備付名簿】（${supporters.length}名分）を出力しました。\n本保険は都度の名簿提出が不要ですが、事故発生時に補償対象者であることを証明するため、本名簿データを最新状態で保管してください。`
+  );
+};
+
+// ============================================================================
+// 三鷹市保護者アンケート回答 CSV出力機能（UTF-8 BOM付き）
+// ============================================================================
+
+window.exportSurveyCSV = function() {
+  const responses = state.surveyResponses || [];
+  if (responses.length === 0) {
+    showCustomAlert('データなし', 'エクスポートするアンケート回答データがありません。');
+    return;
+  }
+
+  const headers = [
+    '回答ID',
+    '回答日時',
+    'お子様の年齢(学年)',
+    '普段の送迎手段',
+    '第一希望園の断念有無(Q3)',
+    '断念・迷った理由詳細(Q3付問)',
+    '送迎の困りごと頻度(Q4)',
+    '困るシチュエーション(Q5)',
+    '過去の対処方法(Q6)',
+    '助け合いサービス利用意向(Q7)',
+    'のびのび広場(トワイライトステイ)送迎利用意向(Q8)',
+    '安心できる送迎手段(Q9)',
+    'ついで送迎サポーター関心(Q10)',
+    '自由記述・ご要望(Q11)',
+    '実証モニター希望メールアドレス(Q12)'
+  ];
+
+  const rows = responses.map(r => [
+    `"${r.id}"`,
+    `"${r.submittedAt}"`,
+    `"${(r.childAges || []).join('、')}"`,
+    `"${(r.transportMethods || []).join('、')}"`,
+    `"${(r.barrierToFirstChoice || '').replace(/"/g, '""')}"`,
+    `"${(r.barrierDetail || '').replace(/"/g, '""')}"`,
+    `"${(r.troubleFrequency || '').replace(/"/g, '""')}"`,
+    `"${(r.troubleSituations || []).join('、')}"`,
+    `"${(r.copingMethods || []).join('、')}"`,
+    `"${(r.mutualAidAcceptance || '').replace(/"/g, '""')}"`,
+    `"${(r.nobinobiStay || '').replace(/"/g, '""')}"`,
+    `"${(r.safeTransportMethods || []).join('、')}"`,
+    `"${(r.supporterInterest || '').replace(/"/g, '""')}"`,
+    `"${(r.comments || '').replace(/"/g, '""')}"`,
+    `"${r.email || ''}"`
+  ]);
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(row => row.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `三鷹市_KidsRide_保護者送迎アンケート回答集計_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // 監査ログに記録
+  if (state.auditLogs) {
+    state.auditLogs.unshift({
+      id: 'LOG-SURVEY-' + Date.now().toString().slice(-4),
+      timestamp: new Date().toLocaleString('ja-JP'),
+      adminId: 'admin',
+      adminName: state.currentAdmin ? state.currentAdmin.name : '統括管理者',
+      action: 'EXPORT_CSV',
+      target: '三鷹市保護者アンケート回答集計',
+      ip: '192.168.1.104',
+      details: `保護者アンケート回答集計(${responses.length}件)をCSV出力。三鷹市子ども政策部への相談・エビデンス資料対応。`
+    });
+    localStorage.setItem('kidsride_audit_logs', JSON.stringify(state.auditLogs));
+  }
+
+  showCustomAlert(
+    'アンケート回答 CSV出力完了',
+    `三鷹市保護者アンケート回答データ（全${responses.length}件）をCSV出力しました。\nExcelで文字化けせず開けるUTF-8(BOM付き)形式です。三鷹市子ども政策部への相談資料や保育施設への提案資料としてご活用いただけます。`
+  );
+};
+
+// URLハッシュ＆クエリ判定（#admin または #survey）
+function checkSpecialRouteFromUrl() {
+  const targetRoute = getInitialRoute();
+  if (targetRoute === 'survey' || targetRoute === 'admin') {
+    state.currentRoute = targetRoute;
     return true;
   }
   return false;
@@ -4995,20 +7209,20 @@ function checkAdminRouteFromUrl() {
 
 // ハッシュ変更時にも即座に反応
 window.addEventListener('hashchange', () => {
-  if (checkAdminRouteFromUrl()) {
+  if (checkSpecialRouteFromUrl()) {
     render();
   }
 });
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
-  checkAdminRouteFromUrl();
+  checkSpecialRouteFromUrl();
   render();
 });
 
 // 既にDOM読込完了済みの環境への対応
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  if (checkAdminRouteFromUrl()) {
+  if (checkSpecialRouteFromUrl()) {
     render();
   }
 }

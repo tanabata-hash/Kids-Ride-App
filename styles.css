@@ -562,4 +562,36 @@ p { color: var(--text-muted); font-size: 0.95rem; margin-bottom: 16px; }
   color: #facc15;
 }
 
+/* 印刷用スタイル（損保提出用 輸送記録・事故証明書） */
+@media print {
+  body {
+    background: white !important;
+  }
+  .app-container, header, nav, .bottom-nav, .no-print, button, .chat-container, .map-overlay {
+    display: none !important;
+  }
+  #accident-proof-modal {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    backdrop-filter: none !important;
+    opacity: 1 !important;
+  }
+  #accident-proof-modal > div {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+  #printable-proof-sheet {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+}
+
+
 
