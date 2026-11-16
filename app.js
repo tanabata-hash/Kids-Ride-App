@@ -3695,6 +3695,103 @@ function SurveyView() {
           </div>
         </div>
 
+        
+        <!-- Q1_2: 通園先・施設名（三鷹市全域対応＆その他自由記入） -->
+        <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0; background:#f8fafc;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+            <label style="font-weight:700; font-size:0.9rem; color:#1e293b; line-height:1.4;">
+              Q1-2. 現在通われている（または入園・入学予定の）幼稚園・保育園・施設名を教えてください
+            </label>
+            <span style="background:#0284c7; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">任意</span>
+          </div>
+          <p style="font-size:0.77rem; color:#64748b; margin:0 0 10px 0; line-height:1.4;">
+            ※三鷹市全域の幼稚園・認可保育園を網羅しています。選択肢にない場合や近隣市・無認可・小学校・学童の場合は「その他」を選択して名称をご記入ください。
+          </p>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <select id="q_kindergarten_select" onchange="window.handleKindergartenChange(this)" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.86rem; color:#1e293b; background:#fff; outline:none; font-family:inherit;">
+              <option value="">▼ 通園先・園名を選択してください（未選択可）</option>
+              
+              <optgroup label="【三鷹市内の幼稚園（私立・全16園）】">
+                <option value="明泉幼稚園">明泉幼稚園（下連雀3）</option>
+                <option value="三鷹幼稚園">三鷹幼稚園（下連雀4）</option>
+                <option value="三鷹杉の子幼稚園">三鷹杉の子幼稚園（下連雀6）</option>
+                <option value="三鷹若葉幼稚園">三鷹若葉幼稚園（上連雀8）</option>
+                <option value="三鷹台幼稚園">三鷹台幼稚園（井の頭2）</option>
+                <option value="明星台幼稚園">明星台幼稚園（井の頭5）</option>
+                <option value="三鷹小鳩幼稚園">三鷹小鳩幼稚園（牟礼4）</option>
+                <option value="三鷹のぞみ幼稚園">三鷹のぞみ幼稚園（牟礼5）</option>
+                <option value="牟礼幼稚園">牟礼幼稚園（牟礼6）</option>
+                <option value="春清学苑幼稚園">春清学苑幼稚園（新川4）</option>
+                <option value="フィッシャー幼稚園">フィッシャー幼稚園（新川6）</option>
+                <option value="認定こども園 三鷹中原幼稚園">認定こども園 三鷹中原幼稚園（中原4）</option>
+                <option value="三鷹みずほ幼稚園">三鷹みずほ幼稚園（井口1）</option>
+                <option value="鶏鳴幼稚園">鶏鳴幼稚園（深大寺1）</option>
+                <option value="三鷹双葉幼稚園">三鷹双葉幼稚園（深大寺1）</option>
+                <option value="長久寺学園幼稚園">長久寺学園幼稚園（大沢2）</option>
+              </optgroup>
+
+              <optgroup label="【三鷹市内の公立保育園（市立・全17園）】">
+                <option value="あけぼの保育園">あけぼの保育園（上連雀4）</option>
+                <option value="上連雀保育園">上連雀保育園（上連雀5）</option>
+                <option value="下連雀保育園">下連雀保育園（下連雀4）</option>
+                <option value="新川保育園">新川保育園（新川5）</option>
+                <option value="高山保育園">高山保育園（牟礼4）</option>
+                <option value="中央保育園">中央保育園（上連雀6）</option>
+                <option value="中原保育園">中原保育園（中原4）</option>
+                <option value="西野保育園">西野保育園（深大寺3）</option>
+                <option value="野崎保育園">野崎保育園（深大寺3）</option>
+                <option value="三鷹台保育園">三鷹台保育園（井の頭2）</option>
+                <option value="南浦東保育園">南浦東保育園（下連雀6）</option>
+                <option value="南浦西保育園">南浦西保育園（下連雀7）</option>
+                <option value="山中保育園">山中保育園（上連雀7）</option>
+                <option value="東台保育園">東台保育園（中原2）</option>
+                <option value="三鷹駅前保育園">三鷹駅前保育園（下連雀3）</option>
+                <option value="牟礼保育園">牟礼保育園（牟礼7）</option>
+                <option value="大沢台保育園">大沢台保育園（大沢2）</option>
+              </optgroup>
+
+              <optgroup label="【三鷹市内の私立・公私連携・認証保育園（全25園以上）】">
+                <option value="あゆみ保育園">あゆみ保育園（上連雀7）</option>
+                <option value="井の頭保育園">井の頭保育園（井の頭3）</option>
+                <option value="ケンパ井の頭">ケンパ井の頭（井の頭1）</option>
+                <option value="みたか小鳥の森保育園">みたか小鳥の森保育園（井の頭5）</option>
+                <option value="まなびの森三鷹牟礼保育園">まなびの森三鷹牟礼保育園（牟礼7）</option>
+                <option value="三鷹赤とんぼ保育園">三鷹赤とんぼ保育園（牟礼3）</option>
+                <option value="ソラストみたか台保育園">ソラストみたか台保育園（牟礼5）</option>
+                <option value="にじいろ保育園三鷹牟礼">にじいろ保育園三鷹牟礼（牟礼6）</option>
+                <option value="にじいろ保育園三鷹下連雀">にじいろ保育園三鷹下連雀（下連雀3）</option>
+                <option value="HOPPA北野けやきの里">HOPPA北野けやきの里（北野4）</option>
+                <option value="ポピンズナーサリースクール三鷹下連雀">ポピンズナーサリースクール三鷹下連雀（下連雀3）</option>
+                <option value="ポピンズナーサリースクール三鷹南">ポピンズナーサリースクール三鷹南（下連雀6）</option>
+                <option value="キッズガーデン三鷹上連雀">キッズガーデン三鷹上連雀（上連雀6）</option>
+                <option value="Gakkenほいくえん 三鷹">Gakkenほいくえん 三鷹（上連雀1）</option>
+                <option value="三鷹新川雲母保育園">三鷹新川雲母保育園（新川3）</option>
+                <option value="どんぐり山保育園">どんぐり山保育園（大沢4）</option>
+                <option value="椎の実子供の家">椎の実子供の家（深大寺2）</option>
+                <option value="グローバルキッズ武蔵境園">グローバルキッズ武蔵境園（井口3）</option>
+                <option value="ピノキオ幼児舎三鷹園">ピノキオ幼児舎三鷹園（下連雀3）</option>
+                <option value="ベネッセ三鷹南保育園">ベネッセ三鷹南保育園（下連雀6）</option>
+                <option value="こどもの家三鷹">こどもの家三鷹（上連雀1）</option>
+                <option value="こじか保育園">こじか保育園（上連雀2）</option>
+                <option value="大沢保育園">大沢保育園（大沢1）</option>
+                <option value="深大寺保育園">深大寺保育園（深大寺2）</option>
+                <option value="キディ三鷹">キディ三鷹（下連雀3）</option>
+                <option value="ベビールームみたか">ベビールームみたか（下連雀3）</option>
+              </optgroup>
+
+              <optgroup label="【その他・近隣】">
+                <option value="その他">その他（自由記入・近隣市の園など）</option>
+                <option value="未就園">現在未就園（保活・入園検討中）</option>
+              </optgroup>
+            </select>
+
+            <!-- その他自由記入用入力欄（初期非表示または常時表示） -->
+            <div id="q_kindergarten_other_container" style="display:none; margin-top:4px;">
+              <input type="text" id="q_kindergarten_other_text" placeholder="園名・施設名を入力してください（例：〇〇保育園、〇〇小学校・学童など）" style="width:100%; padding:9px 12px; border:1.5px solid #0284c7; border-radius:8px; font-size:0.84rem; background:#fff; outline:none; box-sizing:border-box;">
+            </div>
+          </div>
+        </div>
+
         <!-- Q2 -->
         <div class="card" style="padding:16px; margin-bottom:14px; border-radius:10px; border:1px solid #e2e8f0;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
@@ -4035,6 +4132,16 @@ window.submitSurveyForm = function(event) {
   };
 
   const childAges = getChecked('q1_childAges');
+
+  // Q1-2 幼稚園・保育園名取得
+  let kindergarten = (document.getElementById('q_kindergarten_select') || {}).value || '';
+  const kgOtherText = ((document.getElementById('q_kindergarten_other_text') || {}).value || '').trim();
+  if (kindergarten === 'その他' && kgOtherText) {
+    kindergarten = `その他(${kgOtherText})`;
+  } else if (!kindergarten && kgOtherText) {
+    kindergarten = kgOtherText;
+  }
+
   if (childAges.length === 0) {
     showCustomAlert('未入力の項目があります', 'Q1のお子様の年齢（学年）を1つ以上選択してください。');
     return;
@@ -4122,6 +4229,7 @@ window.submitSurveyForm = function(event) {
     id: 'SURVEY-' + Date.now().toString().slice(-6),
     submittedAt: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
     childAges: childAges,
+    kindergarten: kindergarten,
     transportMethods: transportMethods,
     barrierToFirstChoice: barrier,
     barrierDetail: barrierDetail.trim(),
@@ -4244,6 +4352,10 @@ window.showSurveyDetailModal = function(id) {
           <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
             <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q1. お子様の年齢（学年）:</strong>
             <div>${(r.childAges || []).join('、')}</div>
+          </div>
+          <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q1-2. 通園先・施設名:</strong>
+            <div style="font-weight:700; color:#0f172a;">${r.kindergarten || '未回答（無記名）'}</div>
           </div>
           <div style="background:#f8fafc; padding:10px 12px; border-radius:8px;">
             <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q2. 主な通園・送迎手段:</strong>
@@ -7193,6 +7305,7 @@ window.exportSurveyCSV = function() {
     '回答ID',
     '回答日時',
     'お子様の年齢(学年)',
+    '通園先・施設名(保育園/幼稚園)',
     '普段の送迎手段',
     '第一希望園の断念有無(Q3)',
     '断念・迷った理由詳細(Q3付問)',
@@ -7211,6 +7324,7 @@ window.exportSurveyCSV = function() {
     `"${r.id}"`,
     `"${r.submittedAt}"`,
     `"${(r.childAges || []).join('、')}"`,
+    `"${(r.kindergarten || '').replace(/"/g, '""')}"`,
     `"${(r.transportMethods || []).join('、')}"`,
     `"${(r.barrierToFirstChoice || '').replace(/"/g, '""')}"`,
     `"${(r.barrierDetail || '').replace(/"/g, '""')}"`,
