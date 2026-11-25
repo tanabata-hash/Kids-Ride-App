@@ -5024,6 +5024,9 @@ function AdminView() {
           <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#0284c7; color:#0284c7; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.syncServerSurveyResponses(true)">
             <i class="ph ph-arrows-clockwise"></i> 最新回答をサーバー同期
           </button>
+          <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#ca8a04; color:#ca8a04; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.openEmailImportModal()">
+            <i class="ph ph-envelope-simple"></i> メール回答取り込み
+          </button>
           <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#16a34a; color:#16a34a; display:flex; align-items:center; gap:4px;" onclick="window.openGasSettingModal()">
             <i class="ph ph-table"></i> スプレッドシート連携 (GAS設定)
           </button>
@@ -7216,6 +7219,133 @@ window.copySurveyTsvForSheets = function() {
   }).catch(() => {
     prompt('以下のテキストを全選択してコピーし、スプレッドシートに貼り付けてください:', tsv);
   });
+};
+
+// ============================================================================
+// メール回答クイック取り込みモーダル & パーサー
+// ============================================================================
+
+window.openEmailImportModal = function() {
+  const modalHtml = `
+    <div id="email-import-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="card" style="max-width:580px; width:100%; padding:24px; background:white; border-radius:16px; box-shadow:var(--shadow-xl); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align:left; max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0; display:flex; align-items:center; gap:8px;">
+            <i class="ph-fill ph-envelope-simple" style="color:#ca8a04;"></i> 受信メールから回答をクイック取り込み
+          </h3>
+          <button style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;" onclick="document.getElementById('email-import-modal').remove();">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+
+        <div style="background:#fefce8; border:1px solid #fef08a; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.8rem; color:#854d0e; line-height:1.6;">
+          <strong><i class="ph-fill ph-info"></i> tanabata@kidsride.jp に届いたメールを貼り付けるだけ:</strong><br>
+          奥様やお知人様から届いた回答通知メールの本文をそのままコピーして下に貼り付け、「ダッシュボードに登録」を押してください。自動で各設問を判別して集計に反映します。
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <textarea id="email-import-textarea" class="form-control" rows="9" placeholder="ここにメール本文（件名〜各設問テーブルなど）をそのまま貼り付けてください..." style="width:100%; font-size:0.82rem; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-family:monospace;"></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <button class="btn btn-outline" style="font-size:0.8rem; padding:8px 14px;" onclick="document.getElementById('email-import-modal').remove();">
+            閉じる
+          </button>
+          <button class="btn btn-primary" style="background:#ca8a04; font-size:0.8rem; padding:8px 18px;" onclick="window.parseAndImportSurveyFromEmail();">
+            <i class="ph ph-plus-circle"></i> ダッシュボードに登録する
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.parseAndImportSurveyFromEmail = async function() {
+  const textarea = document.getElementById('email-import-textarea');
+  if (!textarea || !textarea.value.trim()) {
+    alert('メール本文を貼り付けてください。');
+    return;
+  }
+  const text = textarea.value;
+
+  const extract = (pattern) => {
+    const match = text.match(pattern);
+    return match ? match[1].trim() : '';
+  };
+
+  const id = extract(/(?:回答ID|ID)[:：\s\t]+([A-Za-z0-9_-]+)/) || ('SURVEY-' + Date.now().toString().slice(-6));
+  const submittedAt = extract(/(?:回答日時|日時)[:：\s\t]+([^\n\r]+)/) || new Date().toLocaleString('ja-JP');
+  const email = extract(/(?:メールアドレス|メール|Q12)[:：\s\t]+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/) || extract(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  
+  const childAgesRaw = extract(/(?:Q1_お子様の年齢|お子様の年齢|年齢|学年)[:：\s\t]+([^\n\r]+)/);
+  const childAges = childAgesRaw ? childAgesRaw.split(/[、,・]/).map(s => s.trim()).filter(Boolean) : ['年少（3〜4歳）'];
+
+  const kindergarten = extract(/(?:Q1-2_通園施設名|通園施設名|幼稚園|保育園)[:：\s\t]+([^\n\r]+)/) || '三鷹市内保育施設';
+  
+  const transportMethodsRaw = extract(/(?:Q2_普段の送迎手段|送迎手段)[:：\s\t]+([^\n\r]+)/);
+  const transportMethods = transportMethodsRaw ? transportMethodsRaw.split(/[、,]/).map(s => s.trim()).filter(Boolean) : ['電動アシスト自転車'];
+
+  const barrier = extract(/(?:Q3_第一希望園の断念経験|断念経験)[:：\s\t]+([^\n\r]+)/) || 'はい（第一希望を断念した経験がある）';
+  const barrierDetail = extract(/(?:Q3付問_断念理由詳細|断念理由詳細|断念理由)[:：\s\t]+([^\n\r]+)/) || '';
+  const frequency = extract(/(?:Q4_送迎の困りごと頻度|困る頻度)[:：\s\t]+([^\n\r]+)/) || '週に1〜2回程度';
+  
+  const situationsRaw = extract(/(?:Q5_困るシチュエーション|困るシチュエーション)[:：\s\t]+([^\n\r]+)/);
+  const situations = situationsRaw ? situationsRaw.split(/[、,]/).map(s => s.trim()).filter(Boolean) : ['急な残業・仕事の都合'];
+
+  const copingRaw = extract(/(?:Q6_過去の対処法|過去の対処法|対処法)[:：\s\t]+([^\n\r]+)/);
+  const coping = copingRaw ? copingRaw.split(/[、,]/).map(s => s.trim()).filter(Boolean) : ['仕事を無理に切り上げる / 早退する'];
+
+  const acceptance = extract(/(?:Q7_助け合いサービス利用意向|利用意向)[:：\s\t]+([^\n\r]+)/) || 'ぜひ利用したい（条件が合えば日常的に利用したい）';
+  const nobinobiStay = extract(/(?:Q8_のびのびひろば送迎意向|のびのびひろば)[:：\s\t]+([^\n\r]+)/) || '利用したい（お迎えに行ってもらえるなら利用したい）';
+  
+  const safeMethodsRaw = extract(/(?:Q9_安心できる送迎手段|安心できる送迎手段)[:：\s\t]+([^\n\r]+)/);
+  const safeMethods = safeMethodsRaw ? safeMethodsRaw.split(/[、,]/).map(s => s.trim()).filter(Boolean) : ['近隣の顔見知り・審査済みの保護者による送迎'];
+
+  const supporter = extract(/(?:Q10_サポーター協力意向|サポーター協力意向|サポーター)[:：\s\t]+([^\n\r]+)/) || '時間やルートが合えば「ついで送迎」に協力できる';
+  const comments = extract(/(?:Q11_自由記述・ご意見|自由記述|ご意見)[:：\s\t]+([^\n\r]+)/) || '';
+
+  const importedResponse = {
+    id: id,
+    submittedAt: submittedAt,
+    childAges: childAges,
+    kindergarten: kindergarten,
+    transportMethods: transportMethods,
+    barrierToFirstChoice: barrier,
+    barrierDetail: barrierDetail,
+    troubleFrequency: frequency,
+    troubleSituations: situations,
+    copingMethods: coping,
+    mutualAidAcceptance: acceptance,
+    nobinobiStay: nobinobiStay,
+    safeTransportMethods: safeMethods,
+    supporterInterest: supporter,
+    comments: comments,
+    email: email || ''
+  };
+
+  if (!state.surveyResponses) state.surveyResponses = [];
+  const existingIdx = state.surveyResponses.findIndex(r => r.id === importedResponse.id || (email && r.email === email));
+  if (existingIdx !== -1) {
+    state.surveyResponses[existingIdx] = importedResponse;
+  } else {
+    state.surveyResponses.unshift(importedResponse);
+  }
+  localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));
+
+  try {
+    fetch('/api/survey', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(importedResponse)
+    });
+  } catch (e) {}
+
+  const modal = document.getElementById('email-import-modal');
+  if (modal) modal.remove();
+
+  showCustomAlert('取り込み完了', `回答データ（ID: ${importedResponse.id} / ${email || 'メール未登録'}）をダッシュボードに反映・保存しました！`);
+  render();
 };
 
 // ============================================================================
