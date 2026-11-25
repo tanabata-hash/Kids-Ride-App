@@ -1,11 +1,14 @@
-// Vercel Serverless Function: 三鷹市保護者送迎アンケート回答 受信・メール通知API
-// エンドポイント: POST /api/survey
+// Vercel Serverless Function: 三鷹市保護者送迎アンケート回答 受信・メール通知・集約API
+// エンドポイント: POST /api/survey, GET /api/survey
 
 const FORMSUBMIT_TOKEN = '8110355a424c7cae2d1068e2dfc68556'; // tanabata@kidsride.jp 認証済トークン
 
+// サーバーレスインスタンス内での回答データ蓄積キャッシュ（最大500件）
+let surveyStore = [];
+
 export default async function handler(req, res) {
   // CORSヘッダー設定
-  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader(
@@ -19,11 +22,16 @@ export default async function handler(req, res) {
     return;
   }
 
+  // ==========================================
+  // GET: 管理者画面向け 全回答データの取得
+  // ==========================================
   if (req.method === 'GET') {
     return res.status(200).json({
       status: 'ok',
       service: 'KidsRide Survey Receiver API',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      count: surveyStore.length,
+      responses: surveyStore
     });
   }
 
@@ -31,6 +39,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
+  // ==========================================
+  // POST: アンケート回答の受信・保管・メール通知
+  // ==========================================
   try {
     const data = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
 
@@ -38,11 +49,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid survey data' });
     }
 
-    // 1. Vercelの実行ログに構造化JSONとして永続記録（VercelダッシュボードのLogsで全件閲覧・抽出可能）
+    // 1. サーバー内ストレージに保存（管理者画面取得用）
+    const existingIdx = surveyStore.findIndex(s => s.id === data.id);
+    if (existingIdx !== -1) {
+      surveyStore[existingIdx] = data;
+    } else {
+      surveyStore.unshift(data);
+    }
+    if (surveyStore.length > 500) {
+      surveyStore = surveyStore.slice(0, 500);
+    }
+
+    // 2. Vercelの実行ログに構造化JSONとして永続記録（VercelダッシュボードのLogsで全件閲覧・抽出可能）
     console.log('[KIDSRIDE_SURVEY_SUBMISSION]', JSON.stringify({
       id: data.id,
       submittedAt: data.submittedAt || new Date().toISOString(),
       childAges: data.childAges,
+      kindergarten: data.kindergarten,
       transportMethods: data.transportMethods,
       barrierToFirstChoice: data.barrierToFirstChoice,
       barrierDetail: data.barrierDetail,
@@ -59,13 +82,14 @@ export default async function handler(req, res) {
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''
     }, null, 2));
 
-    // 2. 代表メール（tanabata@kidsride.jp）へFormSubmit経由で即時メール自動通知
+    // 3. 代表メール（tanabata@kidsride.jp）へFormSubmit経由で即時メール自動通知
     const emailPayload = {
       _subject: `【KidsRideアンケート回答】${(data.childAges || []).join('・')}の保護者様より新しい回答が届きました (${data.id})`,
       _template: 'table',
       '回答ID': data.id,
       '回答日時': data.submittedAt || new Date().toLocaleString('ja-JP'),
       'Q1_お子様の年齢': Array.isArray(data.childAges) ? data.childAges.join('、') : (data.childAges || ''),
+      'Q1-2_通園施設名': data.kindergarten || '（未選択）',
       'Q2_普段の送迎手段': Array.isArray(data.transportMethods) ? data.transportMethods.join('、') : (data.transportMethods || ''),
       'Q3_第一希望園の断念経験': data.barrierToFirstChoice || '',
       'Q3付問_断念理由詳細': data.barrierDetail || '（未記入）',
@@ -95,7 +119,7 @@ export default async function handler(req, res) {
       console.error('[MAIL_NOTIFICATION_ERROR]', mailErr.message);
     }
 
-    // 3. 外部Webhook（Google Apps Script / スプレッドシート連携用URL等）が設定されている場合は転送
+    // 4. 外部Webhook（Google Apps Script / スプレッドシート連携用URL等）が設定されている場合は転送
     const externalWebhookUrl = process.env.SURVEY_WEBHOOK_URL;
     if (externalWebhookUrl) {
       try {

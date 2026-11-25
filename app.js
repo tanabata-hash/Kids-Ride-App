@@ -4987,6 +4987,9 @@ function AdminView() {
           <span style="font-size:0.75rem; color:var(--text-muted);">三鷹市子ども政策部への事前相談・保育園説明および実証実験モニター抽出用リアルタイムデータ</span>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#0284c7; color:#0284c7; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.syncServerSurveyResponses(true)">
+            <i class="ph ph-arrows-clockwise"></i> 最新回答をサーバー同期
+          </button>
           <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#16a34a; color:#16a34a; display:flex; align-items:center; gap:4px;" onclick="window.openGasSettingModal()">
             <i class="ph ph-table"></i> スプレッドシート連携 (GAS設定)
           </button>
@@ -7346,3 +7349,42 @@ window.clearTestAnalyticsLogs = function() {
     render();
   }
 };
+
+// ==========================================
+// サーバー側アンケート回答データの自動同期
+// ==========================================
+window.syncServerSurveyResponses = async function(showFeedback = false) {
+  try {
+    const res = await fetch('/api/survey');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.responses) && data.responses.length > 0) {
+        const map = new Map();
+        (state.surveyResponses || []).forEach(r => map.set(r.id, r));
+        data.responses.forEach(r => map.set(r.id, r));
+        state.surveyResponses = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+        localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));
+        if (showFeedback) {
+          window.showCustomAlert('同期完了', `サーバーから最新の回答データ（計 ${state.surveyResponses.length} 件）を取得・反映しました。`);
+        }
+        render();
+        return;
+      }
+    }
+    if (showFeedback) {
+      window.showCustomAlert('同期完了', `現在サーバー上に保持されている最新回答（計 ${(state.surveyResponses || []).length} 件）を表示しています。`);
+    }
+  } catch (err) {
+    console.warn('Survey sync error:', err);
+    if (showFeedback) {
+      window.showCustomAlert('通信エラー', 'サーバーからの回答データ取得に失敗しました。');
+    }
+  }
+};
+
+// 管理画面表示時にバックグラウンドで自動同期実行
+window.addEventListener('hashchange', function() {
+  if (window.location.hash.includes('admin')) {
+    window.syncServerSurveyResponses(false);
+  }
+});
