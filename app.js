@@ -4760,6 +4760,157 @@ function AdminView() {
   }
 
   // ==========================================
+  // 【タブ8】アクセス解析（Web Traffic & Analytics）
+  // ==========================================
+  else if (currentTab === 'analytics') {
+    const localLogs = JSON.parse(localStorage.getItem('kidsride_analytics_events') || '[]');
+    const totalPV = localLogs.length;
+    const uids = new Set(localLogs.map(l => l.visitorId));
+    const totalUU = uids.size;
+
+    const pageCounts = {};
+    const deviceCounts = { 'iPhone (iOS)': 0, 'Android': 0, 'PC (Mac/Win)': 0, 'その他': 0 };
+    const sourceCounts = { 'LINEアプリ経由': 0, 'QRコード/直接': 0, 'Web検索/その他': 0 };
+    const regionCounts = {};
+
+    localLogs.forEach(l => {
+      pageCounts[l.path] = (pageCounts[l.path] || 0) + 1;
+      deviceCounts[l.device] = (deviceCounts[l.device] || 0) + 1;
+      sourceCounts[l.source] = (sourceCounts[l.source] || 0) + 1;
+      regionCounts[l.city] = (regionCounts[l.city] || 0) + 1;
+    });
+
+    const mobileCount = (deviceCounts['iPhone (iOS)'] || 0) + (deviceCounts['Android'] || 0);
+    const mobileRate = totalPV > 0 ? Math.round((mobileCount / totalPV) * 100) : 0;
+    const topCity = Object.keys(regionCounts)[0] || '東京都三鷹市';
+
+    tabContentHtml = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-chart-line-up" style="color:#0284c7;"></i> KidsRide リアルタイム・アクセス解析ダッシュボード
+          </h3>
+          <span style="font-size:0.75rem; color:var(--text-muted);">保護者アンケート（#survey）やWebサイトへのアクセス数・流入経路・端末・地域のリアルタイム分析</span>
+        </div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem; width:auto; display:flex; align-items:center; gap:6px; background:#0284c7;" onclick="window.exportAnalyticsCSV()">
+            <i class="ph ph-file-csv"></i> アクセスログ(CSV)出力
+          </button>
+        </div>
+      </div>
+
+      <!-- 4大アクセスKPIカード -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin-bottom:16px;">
+        <div class="card" style="padding:14px 10px; text-align:center; background:#f0f9ff; border:1px solid #bae6fd;">
+          <span style="font-size:0.72rem; color:#0369a1; display:block; font-weight:700;">総アクセス数 (PV)</span>
+          <strong style="font-size:1.4rem; color:#0284c7;">${totalPV}<span style="font-size:0.75rem;"> 回</span></strong>
+        </div>
+        <div class="card" style="padding:14px 10px; text-align:center; background:#f0fdf4; border:1px solid #bbf7d0;">
+          <span style="font-size:0.72rem; color:#15803d; display:block; font-weight:700;">ユニーク訪問者 (UU)</span>
+          <strong style="font-size:1.4rem; color:#16a34a;">${totalUU}<span style="font-size:0.75rem;"> 名</span></strong>
+        </div>
+        <div class="card" style="padding:14px 10px; text-align:center; background:#fff7ed; border:1px solid #fed7aa;">
+          <span style="font-size:0.72rem; color:#c2410c; display:block; font-weight:700;">スマホ閲覧比率</span>
+          <strong style="font-size:1.4rem; color:#ea580c;">${mobileRate}<span style="font-size:0.75rem;">%</span></strong>
+        </div>
+        <div class="card" style="padding:14px 10px; text-align:center; background:#faf5ff; border:1px solid #e9d5ff;">
+          <span style="font-size:0.72rem; color:#7e22ce; display:block; font-weight:700;">主なアクセス地域</span>
+          <strong style="font-size:1.05rem; color:#9333ea; margin-top:4px; display:block;">${topCity}</strong>
+        </div>
+      </div>
+
+      <!-- 2カラム詳細グリッド -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:16px;">
+        <!-- ① 流入経路・リファラー -->
+        <div class="card" style="padding:14px;">
+          <h4 style="margin:0 0 10px 0; font-size:0.85rem; color:#334155; font-weight:700; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-arrow-bend-down-right" style="color:#0284c7;"></i> 流入経路・アクセス経路
+          </h4>
+          <div style="display:flex; flex-direction:column; gap:8px; font-size:0.75rem;">
+            ${Object.entries(sourceCounts).map(([src, count]) => {
+              const pct = totalPV > 0 ? Math.round((count / totalPV) * 100) : 0;
+              return `
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                    <span style="font-weight:600;">${src}</span>
+                    <strong>${count}回 (${pct}%)</strong>
+                  </div>
+                  <div style="background:#e2e8f0; height:6px; border-radius:3px; overflow:hidden;">
+                    <div style="background:#0284c7; width:${pct}%; height:100%;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- ② デバイス種別 -->
+        <div class="card" style="padding:14px;">
+          <h4 style="margin:0 0 10px 0; font-size:0.85rem; color:#334155; font-weight:700; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-device-mobile" style="color:#10b981;"></i> アクセス端末 (デバイス種別)
+          </h4>
+          <div style="display:flex; flex-direction:column; gap:8px; font-size:0.75rem;">
+            ${Object.entries(deviceCounts).map(([dev, count]) => {
+              const pct = totalPV > 0 ? Math.round((count / totalPV) * 100) : 0;
+              return `
+                <div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                    <span style="font-weight:600;">${dev}</span>
+                    <strong>${count}回 (${pct}%)</strong>
+                  </div>
+                  <div style="background:#e2e8f0; height:6px; border-radius:3px; overflow:hidden;">
+                    <div style="background:#10b981; width:${pct}%; height:100%;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- 直近アクセスログ一覧表 -->
+      <div class="card" style="padding:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h4 style="margin:0; font-size:0.9rem; color:#334155; font-weight:700; display:flex; align-items:center; gap:6px;">
+            <i class="ph-fill ph-clock-counter-clockwise" style="color:#64748b;"></i> 直近のリアルタイムアクセス履歴
+          </h4>
+          <span style="font-size:0.7rem; color:#64748b;">自動記録・最新順</span>
+        </div>
+        <div style="overflow-x:auto; border:1px solid #e2e8f0; border-radius:8px;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.72rem; text-align:left;">
+            <thead>
+              <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; color:var(--text-muted);">
+                <th style="padding:8px;">アクセス日時</th>
+                <th style="padding:8px;">閲覧ページ</th>
+                <th style="padding:8px;">流入元</th>
+                <th style="padding:8px;">端末</th>
+                <th style="padding:8px;">推定アクセス地域</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${localLogs.length === 0 ? `
+                <tr>
+                  <td colspan="5" style="padding:24px; text-align:center; color:#64748b; background:#f8fafc;">
+                    現在、記録されたアクセスログはありません
+                  </td>
+                </tr>
+              ` : localLogs.slice(0, 30).map(l => `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:8px; white-space:nowrap; font-weight:600;">${l.timestamp}</td>
+                  <td style="padding:8px;"><span style="background:#e0f2fe; color:#0369a1; padding:2px 6px; border-radius:4px; font-weight:700;">${l.path}</span></td>
+                  <td style="padding:8px;">${l.source}</td>
+                  <td style="padding:8px;">${l.device}</td>
+                  <td style="padding:8px; color:#15803d; font-weight:600;"><i class="ph-fill ph-map-pin"></i> ${l.city}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  // ==========================================
   // 【タブ7】アンケート集計（三鷹市保護者実態調査）
   // ==========================================
   else if (currentTab === 'survey') {
@@ -5146,6 +5297,9 @@ function AdminView() {
         </div>
         <div style="${getTabStyle('survey')}" onclick="setAdminTab('survey')">
           <i class="ph-fill ph-chart-pie-slice"></i> アンケート集計 (${(state.surveyResponses || []).length})
+        </div>
+        <div style="${getTabStyle('analytics')}" onclick="setAdminTab('analytics')">
+          <i class="ph-fill ph-chart-line-up"></i> アクセス解析
         </div>
       </div>
 
@@ -7077,3 +7231,81 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     render();
   }
 }
+
+// ==========================================
+// KidsRide アクセス解析・ページビュー自動追跡
+// ==========================================
+window.trackPageView = function() {
+  try {
+    const path = window.location.hash || window.location.pathname || '/';
+    const ref = document.referrer || 'direct';
+    const ua = navigator.userAgent;
+    const isLine = /Line/i.test(ua) || ref.includes('line.me') || window.location.search.includes('source=line');
+    const isQr = window.location.search.includes('source=qr') || ref === 'direct' || !ref;
+
+    // ビジターID
+    let visitorId = localStorage.getItem('kidsride_visitor_id');
+    if (!visitorId) {
+      visitorId = 'V-' + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('kidsride_visitor_id', visitorId);
+    }
+
+    const payload = {
+      path: path,
+      referrer: ref,
+      source: isLine ? 'line' : (isQr ? 'qr' : 'web'),
+      visitorId: visitorId,
+      userAgent: ua,
+      city: '東京都三鷹市'
+    };
+
+    // ローカルストレージに蓄積
+    let localLogs = JSON.parse(localStorage.getItem('kidsride_analytics_events') || '[]');
+    const newEntry = {
+      id: 'ACC-' + Date.now().toString(36),
+      timestamp: new Date().toLocaleString('ja-JP'),
+      path: payload.path,
+      source: isLine ? 'LINEアプリ経由' : (isQr ? 'QRコード/直接' : 'Web検索/その他'),
+      referrer: payload.referrer,
+      device: /iPhone/i.test(ua) ? 'iPhone (iOS)' : (/Android/i.test(ua) ? 'Android' : 'PC (Mac/Win)'),
+      city: '東京都三鷹市(推定)',
+      visitorId: visitorId
+    };
+    localLogs.unshift(newEntry);
+    if (localLogs.length > 300) localLogs = localLogs.slice(0, 300);
+    localStorage.setItem('kidsride_analytics_events', JSON.stringify(localLogs));
+
+    // サーバーレスAPIへ送信
+    if (window.location.protocol.startsWith('http')) {
+      fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function(e) { /* ignore ping errors */ });
+    }
+  } catch (err) {
+    console.error('trackPageView error', err);
+  }
+};
+
+// アクセスログのCSVエクスポート
+window.exportAnalyticsCSV = function() {
+  const logs = JSON.parse(localStorage.getItem('kidsride_analytics_events') || '[]');
+  if (logs.length === 0) {
+    window.showCustomAlert('データなし', 'エクスポート可能なアクセスログがありません。');
+    return;
+  }
+  let csv = 'アクセスID,日時,閲覧ページ,流入経路,端末(デバイス),推定アクセス地域,訪問者ID\n';
+  logs.forEach(l => {
+    csv += `"${l.id}","${l.timestamp}","${l.path}","${l.source}","${l.device}","${l.city}","${l.visitorId}"\n`;
+  });
+  const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `KidsRide_アクセスログ_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+};
+
+window.addEventListener('load', window.trackPageView);
+window.addEventListener('hashchange', window.trackPageView);
