@@ -1,14 +1,33 @@
 // ============================================================================
-// 回答者端末内（LocalStorage）に保持されている未送信回答データの自動救出・サーバー同期
+// 回答者端末内（LocalStorage）に保持されている実回答の救出 & ダミーデータ(example.com)の完全パージ
 // ============================================================================
-(function autoRescueLocalSurveyResponses() {
+(function autoCleanAndRescueLocalSurveys() {
   try {
     const raw = localStorage.getItem('kidsride_survey_responses');
     if (!raw) return;
-    const localSurveys = JSON.parse(raw);
-    if (Array.isArray(localSurveys) && localSurveys.length > 0) {
-      // 救出対象の回答データをバックグラウンドでサーバーへ転送
-      localSurveys.forEach(survey => {
+    let localSurveys = JSON.parse(raw);
+    if (Array.isArray(localSurveys)) {
+      // 1. example.com を含むダミーデータを LocalStorage から完全に永久消去
+      localSurveys = localSurveys.filter(s => !s.email || !s.email.includes('example.com'));
+      
+      // 2. 同一メールアドレスの重複排除
+      const emailSeen = new Set();
+      const deduped = [];
+      localSurveys.forEach(s => {
+        if (s.email && s.email.trim()) {
+          if (!emailSeen.has(s.email.trim())) {
+            emailSeen.add(s.email.trim());
+            deduped.push(s);
+          }
+        } else {
+          deduped.push(s);
+        }
+      });
+
+      localStorage.setItem('kidsride_survey_responses', JSON.stringify(deduped));
+
+      // 3. 残った本物の回答データをサーバーへ同期
+      deduped.forEach(survey => {
         if (survey && survey.id) {
           fetch('/api/survey', {
             method: 'POST',
@@ -19,7 +38,7 @@
       });
     }
   } catch (err) {
-    console.warn('Auto rescue failed:', err);
+    console.warn('Auto cleanup & rescue failed:', err);
   }
 })();
 
@@ -233,42 +252,6 @@ const INITIAL_SURVEY_RESPONSES = [
     supporterInterest: '時間やルートが合えば「ついで送迎」に協力できる',
     comments: '自分が行けない時間にお迎えに行ってもらって助かったり、逆に行ける日は他のお子さんも一緒に連れて帰ったりできたらとても心強いです。ぜひ三鷹市内で実現してほしいです。',
     email: 'kawagoishi@gmail.com'
-  },
-  {
-    id: 'SURVEY-202610-001',
-    submittedAt: '2026/11/25 20:15',
-    childAges: ['2〜3歳（年少少・年少）', '4〜5歳（年中・年長）'],
-    kindergarten: '三鷹市小規模保育園',
-    transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
-    barrierToFirstChoice: 'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
-    barrierDetail: '第1希望だった認可園は自宅（下連雀）から2.3kmの距離にあり、雨の日に子ども2人を乗せての自転車移動が極めて危険と判断し、設備や教育方針には妥協して近隣の小規模園にしました。',
-    troubleFrequency: '週に1〜2回程度感じる',
-    troubleSituations: ['雨・雪・強風・猛暑などの悪天候', '急な仕事の残業、突発的な会議や外出', 'きょうだいの急な発熱・通院・看病'],
-    copingMethods: ['仕事を無理に切り上げて急いで対応した', '祖父母・親族に急遽お願いした'],
-    mutualAidAcceptance: 'ぜひ定期的に利用したい',
-    nobinobiStay: '利用したい（トワイライトステイ送迎）',
-    safeTransportMethods: ['自転車での送迎（幼児同乗器・ヘルメット着用）', 'リアルタイムで現在地がGPS追跡できれば安心', '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
-    supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
-    comments: '同じ園のママ・パパ同士であれば人となりも分かりやすく、最高2億円の包括保険があるなら安心して頼めそうです。雨の日の送迎が特に助かります。',
-    email: 'm.yamada.mitaka@example.com'
-  },
-  {
-    id: 'SURVEY-202610-006',
-    submittedAt: '2026/11/25 20:30',
-    childAges: ['4〜5歳（年中・年長）'],
-    kindergarten: '三鷹市立保育園',
-    transportMethods: ['徒歩'],
-    barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
-    barrierDetail: '',
-    troubleFrequency: '年に数回・ごく稀にある',
-    troubleSituations: ['保護者自身の体調不良・ケガ・通院', 'きょうだいの急な発熱・通院・看病'],
-    copingMethods: ['仕事を無理に切り上げて急いで対応した'],
-    mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
-    nobinobiStay: '状況によっては利用したい',
-    safeTransportMethods: ['徒歩での引率（手つなぎ・見守り歩行）'],
-    supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
-    comments: '自営業で時間に融通が利く日もあるので、近所の困っているママ・パパを徒歩で一緒に連れて行くくらいなら喜んでお手伝いできます。',
-    email: 't.suzuki.inokashira@example.com'
   }
 ];
 
@@ -448,16 +431,26 @@ const state = {
   driverRankings: [],
   // 登録者全員の必要情報台帳（実データ）
   allRegistrants: JSON.parse(localStorage.getItem('kidsride_registered_users') || '[]'),
-  // 三鷹市・子育て世帯送迎アンケート回答データベース（実データ・知人様回答を含むシードとマージ）
+  // 三鷹市・子育て世帯送迎アンケート回答データベース（実データ・ダミー完全除外・重複排除）
   surveyResponses: (function() {
     try {
       const saved = JSON.parse(localStorage.getItem('kidsride_survey_responses') || '[]');
       const map = new Map();
-      INITIAL_SURVEY_RESPONSES.forEach(r => map.set(r.id, r));
+      INITIAL_SURVEY_RESPONSES.forEach(r => {
+        if (!r.email || !r.email.includes('example.com')) {
+          map.set(r.email ? r.email.trim() : r.id, r);
+        }
+      });
       if (Array.isArray(saved)) {
-        saved.forEach(r => map.set(r.id, r));
+        saved.forEach(r => {
+          if (!r.email || !r.email.includes('example.com')) {
+            map.set(r.email ? r.email.trim() : r.id, r);
+          }
+        });
       }
-      return Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+      const cleaned = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+      localStorage.setItem('kidsride_survey_responses', JSON.stringify(cleaned));
+      return cleaned;
     } catch (e) {
       return INITIAL_SURVEY_RESPONSES;
     }
@@ -7716,10 +7709,22 @@ window.syncServerSurveyResponses = async function(showFeedback = false) {
     if (res.ok) {
       const data = await res.json();
       const map = new Map();
-      INITIAL_SURVEY_RESPONSES.forEach(r => map.set(r.id, r));
-      (state.surveyResponses || []).forEach(r => map.set(r.id, r));
+      INITIAL_SURVEY_RESPONSES.forEach(r => {
+        if (!r.email || !r.email.includes('example.com')) {
+          map.set(r.email ? r.email.trim() : r.id, r);
+        }
+      });
+      (state.surveyResponses || []).forEach(r => {
+        if (!r.email || !r.email.includes('example.com')) {
+          map.set(r.email ? r.email.trim() : r.id, r);
+        }
+      });
       if (data && Array.isArray(data.responses)) {
-        data.responses.forEach(r => map.set(r.id, r));
+        data.responses.forEach(r => {
+          if (!r.email || !r.email.includes('example.com')) {
+            map.set(r.email ? r.email.trim() : r.id, r);
+          }
+        });
       }
       state.surveyResponses = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
       localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));
