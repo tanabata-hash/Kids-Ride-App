@@ -2734,6 +2734,7 @@ window.verifyAdmin2FACode = function(event) {
   state.pendingAdminLogin = null;
   localStorage.setItem('kidsride_admin_token', 'true');
   localStorage.setItem('kidsride_admin_user', JSON.stringify(account));
+  localStorage.setItem('kidsride_exclude_analytics', 'true'); // 管理者端末のアクセスを解析除外
 
   window.logAdminAuditAction('LOGIN', account.name, '2段階認証 (2FA) 完了により管理者ポータルへログイン');
   window.showCustomAlert('2段階認証 成功', `セキュリティ確認が完了しました。\nKidsRide 統括管理ポータルへようこそ、${account.name} 様。`);
@@ -2776,6 +2777,7 @@ window.handleAdminRegister = function(event) {
     state.currentAdmin = existingAcc;
     localStorage.setItem('kidsride_admin_token', 'admin_token_' + Date.now());
     localStorage.setItem('kidsride_admin_user', JSON.stringify(existingAcc));
+    localStorage.setItem('kidsride_exclude_analytics', 'true'); // 管理者端末のアクセスを解析除外
 
     window.showCustomAlert('登録・設定完了', `管理者アカウント（${adminId}）のパスワードを設定しました。\n統括ダッシュボードを開きます。`);
     navigate('admin');
@@ -4797,6 +4799,17 @@ function AdminView() {
             <i class="ph ph-file-csv"></i> アクセスログ(CSV)出力
           </button>
         </div>
+      </div>
+
+      <!-- 管理者オプトアウト・除外ステータスインジケーター -->
+      <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="font-size:0.75rem; color:#166534; display:flex; align-items:center; gap:6px;">
+          <i class="ph-fill ph-shield-check" style="color:#16a34a; font-size:1.15rem;"></i>
+          <span><strong>管理者アクセス除外機能：常時有効</strong>（この端末・ブラウザからのページ閲覧は集計から自動除外されています）</span>
+        </div>
+        <button class="btn btn-outline" style="padding:4px 10px; font-size:0.72rem; border-color:#cbd5e1; color:#64748b; background:white; width:auto;" onclick="window.clearTestAnalyticsLogs()">
+          <i class="ph ph-trash"></i> テストアクセス履歴をクリア
+        </button>
       </div>
 
       <!-- 4大アクセスKPIカード -->
@@ -7238,6 +7251,21 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
 window.trackPageView = function() {
   try {
     const path = window.location.hash || window.location.pathname || '/';
+
+    // 【管理者アクセス除外】管理画面(#admin)自体のアクセスはカウントしない
+    if (path.includes('admin') || window.location.search.includes('view=admin')) {
+      return;
+    }
+
+    // 【管理者アクセス除外】管理者端末・ログイン済みブラウザからのアクセスは完全除外
+    const isAdminDevice = !!localStorage.getItem('kidsride_admin_token') ||
+                          !!localStorage.getItem('kidsride_admin_user') ||
+                          localStorage.getItem('kidsride_exclude_analytics') === 'true';
+    if (isAdminDevice) {
+      localStorage.setItem('kidsride_exclude_analytics', 'true');
+      return; // 一切カウントせず終了
+    }
+
     const ref = document.referrer || 'direct';
     const ua = navigator.userAgent;
     const isLine = /Line/i.test(ua) || ref.includes('line.me') || window.location.search.includes('source=line');
@@ -7309,3 +7337,12 @@ window.exportAnalyticsCSV = function() {
 
 window.addEventListener('load', window.trackPageView);
 window.addEventListener('hashchange', window.trackPageView);
+
+// テストアクセス履歴のクリア（管理者用）
+window.clearTestAnalyticsLogs = function() {
+  if (confirm('これまでに記録されたテストアクセス履歴をクリアしますか？\n※クリア後、一般保護者からの新たなアクセスのみがリアルタイム蓄積されます。')) {
+    localStorage.removeItem('kidsride_analytics_events');
+    window.showCustomAlert('クリア完了', 'テストアクセス履歴を消去しました。\n一般ユーザーからの新たなアクセスのみを正確に集計します。');
+    render();
+  }
+};
