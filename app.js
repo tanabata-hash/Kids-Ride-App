@@ -1,3 +1,28 @@
+// ============================================================================
+// 回答者端末内（LocalStorage）に保持されている未送信回答データの自動救出・サーバー同期
+// ============================================================================
+(function autoRescueLocalSurveyResponses() {
+  try {
+    const raw = localStorage.getItem('kidsride_survey_responses');
+    if (!raw) return;
+    const localSurveys = JSON.parse(raw);
+    if (Array.isArray(localSurveys) && localSurveys.length > 0) {
+      // 救出対象の回答データをバックグラウンドでサーバーへ転送
+      localSurveys.forEach(survey => {
+        if (survey && survey.id) {
+          fetch('/api/survey', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(survey)
+          }).catch(() => {});
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Auto rescue failed:', err);
+  }
+})();
+
 // URLパラメータによる即時プレビュー判定 (?mode=demo または ?demo=true でデモ表示、通常は本番モード)
 const _urlParams = new URLSearchParams(window.location.search);
 const _isDemoRequested = _urlParams.get('mode') === 'demo' || _urlParams.get('demo') === 'true';

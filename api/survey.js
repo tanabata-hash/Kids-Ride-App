@@ -141,6 +141,10 @@ export default async function handler(req, res) {
     };
 
     try {
+      // FormSubmit がタイムアウトや障害を起こしても処理全体が止まらないよう3秒でタイムアウト制御
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
       await fetch(`https://formsubmit.co/ajax/${FORMSUBMIT_TOKEN}`, {
         method: 'POST',
         headers: {
@@ -149,10 +153,12 @@ export default async function handler(req, res) {
           'Origin': 'https://www.kidsride.jp',
           'Referer': 'https://www.kidsride.jp/'
         },
-        body: JSON.stringify(emailPayload)
+        body: JSON.stringify(emailPayload),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
     } catch (mailErr) {
-      console.error('[MAIL_NOTIFICATION_ERROR]', mailErr.message);
+      console.warn('[MAIL_NOTIFICATION_WARNING] FormSubmit request failed/timed out:', mailErr.message);
     }
 
     // 4. 外部Webhook（Google Apps Script / スプレッドシート連携用URL等）への自動転送
