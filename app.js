@@ -1,45 +1,70 @@
 // ============================================================================
-// 回答者端末内（LocalStorage）に保持されている実回答の救出 & ダミーデータ(example.com)の完全パージ
+// 回答データ到達保証エンジン（自動救出・未送信キュー再送・ダミー完全パージ）
 // ============================================================================
-(function autoCleanAndRescueLocalSurveys() {
-  try {
-    const raw = localStorage.getItem('kidsride_survey_responses');
-    if (!raw) return;
-    let localSurveys = JSON.parse(raw);
-    if (Array.isArray(localSurveys)) {
-      // 1. example.com を含むダミーデータを LocalStorage から完全に永久消去
-      localSurveys = localSurveys.filter(s => !s.email || !s.email.includes('example.com'));
-      
-      // 2. 同一メールアドレスの重複排除
-      const emailSeen = new Set();
-      const deduped = [];
-      localSurveys.forEach(s => {
-        if (s.email && s.email.trim()) {
-          if (!emailSeen.has(s.email.trim())) {
-            emailSeen.add(s.email.trim());
+(function initSurveyReliabilityEngine() {
+  function processReliabilityQueue() {
+    try {
+      // 1. 未送信キュー（kidsride_pending_surveys）の再送処理
+      const pendingRaw = localStorage.getItem('kidsride_pending_surveys');
+      if (pendingRaw) {
+        let pending = JSON.parse(pendingRaw);
+        if (Array.isArray(pending) && pending.length > 0) {
+          pending.forEach((survey, idx) => {
+            fetch('/api/survey', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(survey)
+            }).then(res => {
+              if (res.ok) {
+                pending.splice(idx, 1);
+                localStorage.setItem('kidsride_pending_surveys', JSON.stringify(pending));
+              }
+            }).catch(() => {});
+          });
+        }
+      }
+
+      // 2. ローカルストレージ内の実回答救出 & example.com ダミーの永久抹消
+      const raw = localStorage.getItem('kidsride_survey_responses');
+      if (!raw) return;
+      let localSurveys = JSON.parse(raw);
+      if (Array.isArray(localSurveys)) {
+        localSurveys = localSurveys.filter(s => !s.email || !s.email.includes('example.com'));
+
+        const emailSeen = new Set();
+        const deduped = [];
+        localSurveys.forEach(s => {
+          if (s.email && s.email.trim()) {
+            if (!emailSeen.has(s.email.trim())) {
+              emailSeen.add(s.email.trim());
+              deduped.push(s);
+            }
+          } else {
             deduped.push(s);
           }
-        } else {
-          deduped.push(s);
-        }
-      });
+        });
 
-      localStorage.setItem('kidsride_survey_responses', JSON.stringify(deduped));
+        localStorage.setItem('kidsride_survey_responses', JSON.stringify(deduped));
 
-      // 3. 残った本物の回答データをサーバーへ同期
-      deduped.forEach(survey => {
-        if (survey && survey.id) {
-          fetch('/api/survey', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(survey)
-          }).catch(() => {});
-        }
-      });
+        // サーバーへの確実なバックグラウンド自動同期
+        deduped.forEach(survey => {
+          if (survey && survey.id) {
+            fetch('/api/survey', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(survey)
+            }).catch(() => {});
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Survey reliability engine error:', err);
     }
-  } catch (err) {
-    console.warn('Auto cleanup & rescue failed:', err);
   }
+
+  // 起動時およびオンライン復帰時に自動実行
+  processReliabilityQueue();
+  window.addEventListener('online', processReliabilityQueue);
 })();
 
 // URLパラメータによる即時プレビュー判定 (?mode=demo または ?demo=true でデモ表示、通常は本番モード)
@@ -3937,17 +3962,23 @@ window.submitSurveyForm = function(event) {
   // 5. サーバー送信処理（Vercel Serverless Function & 外部Webhook）
   const sendPromises = [];
 
-  // (A) Vercel サーバーレスAPI (/api/survey) へ送信
+  // (A) Vercel サーバーレスAPI (/api/survey) へ送信（再送キュー保証付き）
   try {
-    sendPromises.push(
-      fetch('/api/survey', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newResponse)
-      }).catch(err => {
-        console.warn('API submission failed, saved locally:', err);
-      })
-    );
+    const apiPromise = fetch('/api/survey', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newResponse)
+    }).then(res => {
+      if (!res.ok) throw new Error('API returned status ' + res.status);
+    }).catch(err => {
+      console.warn('API submission failed or offline, queued for background retry:', err);
+      try {
+        const pending = JSON.parse(localStorage.getItem('kidsride_pending_surveys') || '[]');
+        pending.push(newResponse);
+        localStorage.setItem('kidsride_pending_surveys', JSON.stringify(pending));
+      } catch(qErr) {}
+    });
+    sendPromises.push(apiPromise);
   } catch (e) {
     console.warn('API error:', e);
   }
@@ -3971,10 +4002,10 @@ window.submitSurveyForm = function(event) {
     }
   }
 
-  // 送信完了を待ってモーダル表示（最大1.5秒でタイムアウトしてユーザーを待たせない）
+  // 送信処理の完了を待機（最大2秒でタイムアウトして保護者様を待たせない）
   Promise.race([
     Promise.allSettled(sendPromises),
-    new Promise(resolve => setTimeout(resolve, 1500))
+    new Promise(resolve => setTimeout(resolve, 2000))
   ]).finally(() => {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -5130,7 +5161,12 @@ function AdminView() {
           <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
             <i class="ph-fill ph-chart-pie-slice" style="color:#0284c7;"></i> 【三鷹市】通園・送迎アンケート実態調査 集計ダッシュボード
           </h3>
-          <span style="font-size:0.75rem; color:var(--text-muted);">地域互助・民間主導の子育て支援モデル設計および実証実験モニター集計リアルタイムデータ</span>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:4px; flex-wrap:wrap;">
+            <span style="font-size:0.75rem; color:var(--text-muted);">地域互助・民間主導の子育て支援モデル設計および実証実験モニター集計リアルタイムデータ</span>
+            <span style="font-size:0.7rem; color:#15803d; background:#dcfce7; border:1px solid #bbf7d0; padding:2px 8px; border-radius:12px; font-weight:700; display:inline-flex; align-items:center; gap:4px;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#16a34a; display:inline-block;"></span> リアルタイム自動同期中 (30秒間隔更新)
+            </span>
+          </div>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#0284c7; color:#0284c7; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.syncServerSurveyResponses(true)">
@@ -7816,3 +7852,15 @@ document.addEventListener('DOMContentLoaded', function() {
     window.syncServerSurveyResponses(false);
   }
 });
+
+// 管理画面表示中のバックグラウンド定期自動同期（30秒間隔でリアルタイム新着回答を集約）
+let adminAutoSyncTimer = null;
+function initAdminPolling() {
+  if (adminAutoSyncTimer) clearInterval(adminAutoSyncTimer);
+  adminAutoSyncTimer = setInterval(() => {
+    if (window.location.hash.includes('admin') || state.currentRoute === 'admin') {
+      window.syncServerSurveyResponses(false);
+    }
+  }, 30000); // 30秒間隔
+}
+initAdminPolling();
