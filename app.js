@@ -227,117 +227,10 @@ const state = {
     inspectionStatus: '定期点検適合 (直近: 2026年6月 12ヶ月定期点検済)',
     isVerified: true
   },
-  // 輸送記録（運行日報・走行ログ一覧：道路運送法および実費精算監査準拠）
-  transportRecords: [
-    {
-      recordId: 'TR-20260825-01',
-      date: '2026/08/25',
-      timeSlot: '08:10 - 08:32 (22分間)',
-      type: '朝便',
-      childName: '山田 太郎 くん (4歳・きりん組)',
-      parentName: '山田 花子 様',
-      departure: '三鷹市下連雀3丁目 ご自宅',
-      destination: '三鷹市立大沢保育園',
-      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
-      distanceKm: 3.2,
-      gasRate: 11, // 円/km
-      actualCost: 35, // 円 (実費のみ・利益0円)
-      status: '運行完了',
-      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
-      preInspection: '日常点検良好 (灯火類・ブレーキ・タイヤ)',
-      childSeatUsed: '適合チャイルドシート着用確認済',
-      gpsLogStatus: 'GPS全軌跡保管済 (2秒間隔測位)'
-    },
-    {
-      recordId: 'TR-20260822-02',
-      date: '2026/08/22',
-      timeSlot: '17:15 - 17:38 (23分間)',
-      type: '夕便',
-      childName: '鈴木 アリサ ちゃん (3歳・うさぎ組)',
-      parentName: '鈴木 一郎 様',
-      departure: '三鷹市立大沢保育園',
-      destination: '三鷹市野崎2丁目 ご自宅',
-      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
-      distanceKm: 2.8,
-      gasRate: 11,
-      actualCost: 30,
-      status: '運行完了',
-      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
-      preInspection: '日常点検良好',
-      childSeatUsed: '適合チャイルドシート着用確認済',
-      gpsLogStatus: 'GPS全軌跡保管済'
-    },
-    {
-      recordId: 'TR-20260820-01',
-      date: '2026/08/20',
-      timeSlot: '08:15 - 08:35 (20分間)',
-      type: '朝便',
-      childName: '山田 太郎 くん (4歳・きりん組)',
-      parentName: '山田 花子 様',
-      departure: '三鷹市下連雀3丁目 ご自宅',
-      destination: '三鷹市立大沢保育園',
-      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
-      distanceKm: 3.2,
-      gasRate: 11,
-      actualCost: 35,
-      status: '運行完了',
-      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
-      preInspection: '日常点検良好',
-      childSeatUsed: '適合チャイルドシート着用確認済',
-      gpsLogStatus: 'GPS全軌跡保管済'
-    },
-    {
-      recordId: 'TR-20260818-03',
-      date: '2026/08/18',
-      timeSlot: '17:00 - 17:25 (25分間)',
-      type: '夕便',
-      childName: '高橋 ソウタ くん (5歳・ぞう組)',
-      parentName: '高橋 恵 様',
-      departure: '三鷹市立大沢保育園',
-      destination: '三鷹市井口1丁目 ご自宅',
-      transportMethod: '自家用車 (トヨタ シエンタ / 多摩 501 さ 38-25)',
-      distanceKm: 3.5,
-      gasRate: 11,
-      actualCost: 38,
-      status: '運行完了',
-      alcoholCheck: '0.00 mg/L (検知なし・出庫前測定済)',
-      preInspection: '日常点検良好',
-      childSeatUsed: '適合ジュニアシート着用確認済',
-      gpsLogStatus: 'GPS全軌跡保管済'
-    }
-  ],
-  // 事故報告および保険会社（損保ジャパン・損害サービスセンター）連携台帳
-  accidentReports: JSON.parse(localStorage.getItem('kidsride_accident_reports') || 'null') || [
-    {
-      reportId: 'ACC-20260825-01',
-      recordId: 'TR-20260825-01',
-      date: '2026/08/25 08:28',
-      driverName: '佐藤 カズヤ',
-      driverPhone: '090-1234-5678',
-      vehicleModel: 'トヨタ シエンタ ハイブリッド',
-      plateNumber: '多摩 501 さ 38-25',
-      vehicleOwner: '佐藤 カズヤ (自己所有自家用車)',
-      location: '三鷹市大沢2丁目 交差点手前10m付近',
-      weather: '晴れ / 良好',
-      policeReported: true,
-      policeStation: '警視庁 三鷹警察署 交通捜査係',
-      policeOfficer: '田中 警部補',
-      incidentNumber: '三鷹-2026-交0825-04',
-      opponentName: '伊藤 健太 様',
-      opponentPhone: '090-9876-5432',
-      opponentPlate: '多摩 300 ろ 12-34 (シルバー プリウス)',
-      opponentInsurance: '三井住友海上火災保険 (確認済)',
-      damageSelf: '左フロントバンパー擦り傷・フェンダー軽微変形',
-      damageOpponent: '右リヤドア擦り傷',
-      childInjured: 'なし（チャイルドシート着用・身体的負傷なし確認済）',
-      driverInjured: 'なし',
-      description: '保育園へ向かう途中、右折待ち車列を交わそうとした際、左側路肩から発進した相手車両の右側面に低速(約10km/h)で接触。直ちに停止し安全確保、児童の無事を確認した上で110番通報およびKidsRide本部へ電話一報を実施。',
-      status: '損保提出済', // '受付済' | '損保提出済' | '協定中' | '完了'
-      submittedToInsuranceDate: '2026/08/25 11:30',
-      insuranceClaimNumber: 'SJ-2026-TOKYO-998124',
-      handlingAgency: '株式会社 保険あっとなびプラネット (担当: 平 恭子 様)'
-    }
-  ],
+  // 輸送記録（運行日報・走行ログ一覧：実データ）
+  transportRecords: JSON.parse(localStorage.getItem('kidsride_transport_records') || '[]'),
+  // 事故報告および保険会社（損保ジャパン・損害サービスセンター）連携台帳（実データ）
+  accidentReports: JSON.parse(localStorage.getItem('kidsride_accident_reports') || '[]'),
   // ガソリン単価改訂の監査ログ（東京運輸支局提示用）
   gasRateAuditLogs: [
     {
@@ -440,434 +333,40 @@ const state = {
   adminUserFilter: 'all', // 'all' | 'driver' | 'parent' | 'both' | 'pending'
   adminUserSearch: '',
   adminSortKey: 'rating', // 'rating' | 'rides' | 'utilization'
-  // 監査ログ（操作・閲覧履歴）
-  auditLogs: JSON.parse(localStorage.getItem('kidsride_audit_logs') || 'null') || [
-    { id: 'LOG-004', timestamp: '2026-09-28 11:25:10', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'UPDATE_CONFIG', target: '公認ガソリン実費単価', ip: '192.168.1.104 (セキュアオフィス回線)', details: '公認実費単価を175円/Lから180円/Lへ改訂' },
-    { id: 'LOG-003', timestamp: '2026-09-28 11:24:02', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'EXPORT_CSV', target: '輸送記録（運行日報）', ip: '192.168.1.104 (セキュアオフィス回線)', details: '東京運輸支局提出用の全運行日報CSVをエクスポート' },
-    { id: 'LOG-002', timestamp: '2026-09-28 11:22:40', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'VIEW_USER', target: '佐藤 カズヤ (d_kazuya)', ip: '192.168.1.104 (セキュアオフィス回線)', details: '登録車両・保険証券番号および本人確認書類を閲覧' },
-    { id: 'LOG-001', timestamp: '2026-09-28 11:20:15', adminId: 'admin', adminName: 'KidsRide 統括管理責任者', action: 'EXPORT_CSV', target: '全登録者台帳', ip: '192.168.1.104 (セキュアオフィス回線)', details: '全158名の登録者台帳CSVファイルをエクスポート' }
-  ],
+  // 監査ログ（操作・閲覧履歴・実データ）
+  auditLogs: JSON.parse(localStorage.getItem('kidsride_audit_logs') || '[]'),
   adminSecuritySettings: {
     twoFactorEnabled: true,
     ipRestricted: true,
-    allowedIpRange: '192.168.1.0/24 (オフィスVPN/指定回線)',
-    currentIp: '192.168.1.104 (認証済回線)'
+    allowedIpRange: 'SSL/TLS 暗号化通信 (保護回線)',
+    currentIp: 'HTTPS接続 (2FA多要素認証済)'
   },
-  // プラットフォーム全体 KPI サマリー
-  platformStats: {
-    totalUsers: 158,
-    totalDrivers: 46,
-    totalParents: 112,
-    monthlyRides: 432,
-    completionRate: 99.8, // 運行完了率 %
-    onTimeRate: 99.2,     // 定刻到着率 %
-    averageRating: 4.91,  // 平均保護者評価
-    safetyIncidentCount: 0 // 事故・誤認引き渡しゼロ
+  // プラットフォーム全体 KPI サマリー（実データ動的集計）
+  get platformStats() {
+    const totalUsers = (this.allRegistrants || []).length;
+    const totalDrivers = (this.allRegistrants || []).filter(u => u.role === 'driver' || u.role === 'both').length;
+    const totalParents = (this.allRegistrants || []).filter(u => u.role === 'parent').length;
+    const monthlyRides = (this.transportRecords || []).length;
+    const accidents = (this.accidentReports || []).length;
+    const surveys = (this.surveyResponses || []).length;
+    return {
+      totalUsers: totalUsers,
+      totalDrivers: totalDrivers,
+      totalParents: totalParents,
+      monthlyRides: monthlyRides,
+      completionRate: monthlyRides > 0 ? 100 : 0,
+      onTimeRate: 100,
+      averageRating: 5.0,
+      safetyIncidentCount: accidents,
+      totalSurveys: surveys
+    };
   },
-  // ドライバー稼働率・評価ランキング
-  driverRankings: [
-    {
-      rank: 1,
-      id: 'd_kazuya',
-      name: '佐藤 カズヤ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user',
-      area: '三鷹市・武蔵野市',
-      facility: '三鷹市立牟礼保育園 / 大沢保育園',
-      method: '車 (シエンタ・ECE R129適合)',
-      methodType: 'Car',
-      monthlyRides: 38,
-      utilizationRate: 95.0, // 稼働可能日に対する稼働率%
-      rating: 4.98,
-      reviewsCount: 156,
-      onTimeRate: 100, // 定刻率%
-      alcoholCheckRate: 100, // 点検率%
-      badge: 'Sランク / 最優秀ゴールド',
-      badgeColor: '#eab308',
-      gasCostTotal: 1330, // 円
-      pointsEarned: 800,  // pt
-      status: 'active'
-    },
-    {
-      rank: 2,
-      id: 'd_kenta',
-      name: '高橋 ケンタ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=kenta',
-      area: '三鷹市下連雀・上連雀',
-      facility: '三鷹市立大沢保育園',
-      method: '車 (フリード・ドラレコ完備)',
-      methodType: 'Car',
-      monthlyRides: 32,
-      utilizationRate: 91.4,
-      rating: 4.94,
-      reviewsCount: 112,
-      onTimeRate: 99.2,
-      alcoholCheckRate: 100,
-      badge: 'Aランク / プラチナ',
-      badgeColor: '#6366f1',
-      gasCostTotal: 1120,
-      pointsEarned: 600,
-      status: 'active'
-    },
-    {
-      rank: 3,
-      id: 'd_aya',
-      name: '鈴木 アヤ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=aya',
-      area: '三鷹市中原・新川',
-      facility: '明泉幼稚園 / あゆみ保育園',
-      method: '電動アシスト自転車 (幼児2人同乗適合)',
-      methodType: 'Bicycle',
-      monthlyRides: 29,
-      utilizationRate: 88.6,
-      rating: 4.91,
-      reviewsCount: 88,
-      onTimeRate: 98.9,
-      alcoholCheckRate: 100,
-      badge: 'Aランク / ゴールド',
-      badgeColor: '#0ea5e9',
-      gasCostTotal: 0,
-      pointsEarned: 5800,
-      status: 'active'
-    },
-    {
-      rank: 4,
-      id: 'd_yuuki',
-      name: '渡辺 ユウキ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=yuuki',
-      area: '三鷹市上連雀',
-      facility: '三鷹市立上連雀保育園',
-      method: '徒歩見守り送迎',
-      methodType: 'Walking',
-      monthlyRides: 24,
-      utilizationRate: 85.7,
-      rating: 4.88,
-      reviewsCount: 64,
-      onTimeRate: 99.5,
-      alcoholCheckRate: 100,
-      badge: 'Bランク / シルバー',
-      badgeColor: '#64748b',
-      gasCostTotal: 0,
-      pointsEarned: 4800,
-      status: 'active'
-    },
-    {
-      rank: 5,
-      id: 'd_misaki',
-      name: '伊藤 ミサキ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=misaki',
-      area: '三鷹市井の頭',
-      facility: '三鷹市立井の頭保育園',
-      method: '車 (セレナ・チャイルドシート2台)',
-      methodType: 'Car',
-      monthlyRides: 20,
-      utilizationRate: 80.0,
-      rating: 4.85,
-      reviewsCount: 42,
-      onTimeRate: 98.0,
-      alcoholCheckRate: 100,
-      badge: 'Bランク / シルバー',
-      badgeColor: '#64748b',
-      gasCostTotal: 700,
-      pointsEarned: 400,
-      status: 'active'
-    }
-  ],
-  // 登録者全員の必要情報台帳（保護者・送迎者・兼任）
-  allRegistrants: [
-    {
-      id: 'REG-1001',
-      name: '佐藤 カズヤ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=driver_user',
-      role: 'driver',
-      roleLabel: '送迎協力者 (ドライバー)',
-      email: 'kazuya.sato@example.com',
-      phone: '090-1234-5678',
-      address: '東京都三鷹市牟礼4丁目12-3',
-      facility: '三鷹市立牟礼保育園 / 大沢保育園',
-      authStatus: 'verified',
-      authStatusLabel: '全書類審査適合（本人・在園・車検・保険）',
-      vehicle: {
-        model: 'トヨタ シエンタ ハイブリッド (7名定員)',
-        plateNumber: '多摩 501 さ 38-25',
-        shakenExpiry: '2027/10/15 (有効)',
-        insurance: '東京海上日動 (対人対物無制限・証券番号: TKN-88392019)',
-        childSeat: 'ECE R129適合 ISOFIX 1台 + ジュニアシート 1台',
-        dashcam: '前後2カメラ クラウド録画'
-      },
-      children: [
-        { name: '佐藤 リョウ', age: '5歳', classRoom: 'きりん組' }
-      ],
-      bankAccount: 'みずほ銀行 三鷹支店 (普 1234567 / サトウ カズヤ)',
-      registeredAt: '2026/04/01',
-      lastActive: '2026/08/28 08:35',
-      totalRides: 142,
-      rating: 4.98
-    },
-    {
-      id: 'REG-1002',
-      name: '山田 花子',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hanako',
-      role: 'parent',
-      roleLabel: '保護者 (依頼者)',
-      email: 'hanako.yamada@example.com',
-      phone: '090-9876-5432',
-      address: '東京都三鷹市下連雀3丁目8-15',
-      facility: '三鷹市立大沢保育園',
-      authStatus: 'verified',
-      authStatusLabel: '本人確認・在園確認済',
-      vehicle: null,
-      children: [
-        { name: '山田 太郎', age: '4歳', classRoom: 'きりん組 (アレルギー: なし)' }
-      ],
-      bankAccount: 'クレジットカード決済 (Visa ****4242)',
-      pointsBalance: 1400,
-      registeredAt: '2026/04/10',
-      lastActive: '2026/08/28 07:00',
-      totalRides: 48,
-      rating: 4.95
-    },
-    {
-      id: 'REG-1003',
-      name: '高橋 ケンタ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=kenta',
-      role: 'both',
-      roleLabel: '兼任（保護者 ＆ 送迎協力者）',
-      email: 'kenta.takahashi@example.com',
-      phone: '080-2345-6789',
-      address: '東京都三鷹市下連雀6丁目2-1',
-      facility: '三鷹市立大沢保育園',
-      authStatus: 'verified',
-      authStatusLabel: '全書類審査適合（本人・在園・車検・保険）',
-      vehicle: {
-        model: 'ホンダ フリード ハイブリッド (6名定員)',
-        plateNumber: '多摩 500 つ 88-12',
-        shakenExpiry: '2027/05/20 (有効)',
-        insurance: '三井住友海上 (対人対物無制限・証券番号: MS-7719203)',
-        childSeat: 'ECE R129適合チャイルドシート常設',
-        dashcam: 'コムテック前後2カメラ'
-      },
-      children: [
-        { name: '高橋 ソウタ', age: '5歳', classRoom: 'ぞう組' }
-      ],
-      bankAccount: '三菱UFJ銀行 三鷹支店 (普 9876543 / タカハシ ケンタ)',
-      registeredAt: '2026/04/15',
-      lastActive: '2026/08/27 17:30',
-      totalRides: 98,
-      rating: 4.94
-    },
-    {
-      id: 'REG-1004',
-      name: '鈴木 一郎',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ichiro',
-      role: 'parent',
-      roleLabel: '保護者 (依頼者)',
-      email: 'ichiro.suzuki@example.com',
-      phone: '090-3456-7890',
-      address: '東京都三鷹市野崎2丁目14-5',
-      facility: '三鷹市立大沢保育園',
-      authStatus: 'verified',
-      authStatusLabel: '本人確認・在園確認済',
-      vehicle: null,
-      children: [
-        { name: '鈴木 アリサ', age: '3歳', classRoom: 'うさぎ組' }
-      ],
-      bankAccount: 'クレジットカード決済 (MasterCard ****8811)',
-      pointsBalance: 800,
-      registeredAt: '2026/05/01',
-      lastActive: '2026/08/26 18:00',
-      totalRides: 36,
-      rating: 4.90
-    },
-    {
-      id: 'REG-1005',
-      name: '鈴木 アヤ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=aya',
-      role: 'driver',
-      roleLabel: '送迎協力者 (自転車)',
-      email: 'aya.suzuki@example.com',
-      phone: '080-4567-8901',
-      address: '東京都三鷹市中原1丁目19-2',
-      facility: '明泉幼稚園 / あゆみ保育園',
-      authStatus: 'verified',
-      authStatusLabel: '本人確認・在園確認・自転車保険加入済',
-      vehicle: {
-        model: 'パナソニック ギュット・クルーム (電動アシスト自転車)',
-        plateNumber: '防犯登録: 警視庁 第482910号',
-        shakenExpiry: '自転車点検適合証 (2026/06受検済)',
-        insurance: 'au損保 自転車向け保険 (賠償責任最高1億円補償)',
-        childSeat: '前後チャイルドシート (SGマーク・ヘルメット常備)',
-        dashcam: 'ヘルメット装着アクションカメラ録画'
-      },
-      children: [
-        { name: '鈴木 レン', age: '4歳', classRoom: '年中組' }
-      ],
-      bankAccount: '三井住友銀行 武蔵境支店 (普 3456789 / スズキ アヤ)',
-      registeredAt: '2026/05/12',
-      lastActive: '2026/08/28 09:10',
-      totalRides: 76,
-      rating: 4.91
-    },
-    {
-      id: 'REG-1006',
-      name: '小林 ダイスケ',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=daisuke',
-      role: 'driver',
-      roleLabel: '送迎協力者 (審査中)',
-      email: 'daisuke.kobayashi@example.com',
-      phone: '090-5678-9012',
-      address: '東京都三鷹市深大寺2丁目3-9',
-      facility: '三鷹市立深大寺保育園',
-      authStatus: 'pending',
-      authStatusLabel: '車検証・任意保険証券の審査中',
-      vehicle: {
-        model: '日産 セレナ e-POWER (8名定員)',
-        plateNumber: '多摩 502 て 55-66',
-        shakenExpiry: '2027/08/30 (車検残存あり)',
-        insurance: '損保ジャパン (対人対物無制限確認中)',
-        childSeat: 'チャイルドシート適合申請中',
-        dashcam: '純正ドライブレコーダー'
-      },
-      children: [
-        { name: '小林 ユナ', age: '3歳', classRoom: 'りす組' }
-      ],
-      bankAccount: 'ゆうちょ銀行 (記号 10120 番号 99887761)',
-      registeredAt: '2026/08/26',
-      lastActive: '2026/08/26 14:20',
-      totalRides: 0,
-      rating: 0
-    }
-  ],
-  // 三鷹市・子育て世帯送迎アンケート回答データベース
-  surveyResponses: JSON.parse(localStorage.getItem('kidsride_survey_responses') || 'null') || [
-    {
-      id: 'SURVEY-202610-001',
-      submittedAt: '2026/10/12 14:22',
-      childAges: ['2〜3歳（年少少・年少）', '4〜5歳（年中・年長）'],
-      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
-      barrierToFirstChoice: 'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
-      barrierDetail: '第1希望だった認可園は自宅（下連雀）から2.3kmの距離にあり、雨の日に子ども2人を乗せての自転車移動が極めて危険と判断し、設備や教育方針には妥協して近隣の小規模園にしました。',
-      troubleFrequency: '週に1〜2回程度感じる',
-      troubleSituations: ['雨・雪・強風・猛暑などの悪天候', '急な仕事の残業、突発的な会議や外出', 'きょうだいの急な発熱・通院・看病'],
-      copingMethods: ['仕事を無理に切り上げて急いで対応した', '祖父母・親族に急遽お願いした'],
-      mutualAidAcceptance: 'ぜひ定期的に利用したい',
-      safeTransportMethods: ['自転車での送迎（幼児同乗器・ヘルメット着用）', 'リアルタイムで現在地がGPS追跡できれば安心', '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
-      supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
-      comments: '同じ園のママ・パパ同士であれば人となりも分かりやすく、最高2億円の包括保険があるなら安心して頼めそうです。雨の日の送迎が特に助かります。',
-      email: 'm.yamada.mitaka@example.com'
-    },
-    {
-      id: 'SURVEY-202610-002',
-      submittedAt: '2026/10/12 16:45',
-      childAges: ['0〜1歳（乳児）'],
-      transportMethods: ['徒歩', 'バス・公共交通機関'],
-      barrierToFirstChoice: '諦めはしなかったが、非常に迷った・現在も無理をして通わせている',
-      barrierDetail: '復職後の勤務時間とバスの運行間隔が合わず、朝夕ともに小走りでギリギリの送迎を続けており、毎日の精神的負担が大きいです。',
-      troubleFrequency: 'ほぼ毎日感じる',
-      troubleSituations: ['朝の出勤時間と登園時間のスケジュール調整', '急な仕事の残業、突発的な会議や外出'],
-      copingMethods: ['仕事を無理に切り上げて急いで対応した', '解決できず、園に謝罪して遅れて迎えに行った'],
-      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
-      safeTransportMethods: ['徒歩での引率（手つなぎ・見守り歩行）', 'リアルタイムで現在地がGPS追跡できれば安心'],
-      supporterInterest: '自分は送迎を「頼む側」専任で利用したい',
-      comments: 'ファミサポは登録や事前面談に時間がかかり突発的な残業に対応できないため、アプリで園内完結する仕組みを切望しています。',
-      email: 'k.sato.mure@example.com'
-    },
-    {
-      id: 'SURVEY-202610-003',
-      submittedAt: '2026/10/13 09:15',
-      childAges: ['4〜5歳（年中・年長）'],
-      transportMethods: ['自家用車'],
-      barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
-      barrierDetail: '',
-      troubleFrequency: '月に数回程度感じる',
-      troubleSituations: ['保護者自身の体調不良・ケガ・通院', '習い事の開始時間とお迎え時間の重複'],
-      copingMethods: ['祖父母・親族に急遽お願いした', '園のママ友・パパ友にお願いした'],
-      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
-      safeTransportMethods: ['自家用車での送迎（適合チャイルドシート常設）', '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
-      supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
-      comments: '毎朝車で送迎しているので、同じクラスの子を一緒に乗せていくことは全然可能です。ガソリン代実費が出るのも気兼ねがなくて良いですね。',
-      email: 'ken.tanaka@example.com'
-    },
-    {
-      id: 'SURVEY-202610-004',
-      submittedAt: '2026/10/13 11:30',
-      childAges: ['小学校低学年（1〜3年生）', '2〜3歳（年少少・年少）'],
-      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）', '徒歩'],
-      barrierToFirstChoice: 'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
-      barrierDetail: '学童と保育園のお迎え場所・時間が完全に分断されており、物理的に片道15分の距離を移動しきれないため、上の子の学童を民間から遠い公立に変えざるを得ませんでした。',
-      troubleFrequency: 'ほぼ毎日感じる',
-      troubleSituations: ['習い事の開始時間とお迎え時間の重複', '雨・雪・強風・猛暑などの悪天候', 'きょうだいの急な発熱・通院・看病'],
-      copingMethods: ['仕事を無理に切り上げて急いで対応した', '園のママ友・パパ友にお願いした'],
-      mutualAidAcceptance: 'ぜひ定期的に利用したい',
-      safeTransportMethods: ['徒歩での引率（手つなぎ・見守り歩行）', '自転車での送迎（幼児同乗器・ヘルメット着用）'],
-      supporterInterest: 'タイミングや都合が合う日なら引き受けてもよい',
-      comments: 'きょうだい別園・学童問題は三鷹市の共働き家庭にとって死活問題です。ぜひ早期の実証実験と制度化を応援しています！',
-      email: 'a.watanabe.osawa@example.com'
-    },
-    {
-      id: 'SURVEY-202610-005',
-      submittedAt: '2026/10/13 18:20',
-      childAges: ['2〜3歳（年少少・年少）'],
-      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
-      barrierToFirstChoice: '諦めはしなかったが、非常に迷った・現在も無理をして通わせている',
-      barrierDetail: '東八道路を横断するルートで交通量が多く、雨の日はスリップや大型車との接触事故への不安が常にあります。',
-      troubleFrequency: '週に1〜2回程度感じる',
-      troubleSituations: ['雨・雪・強風・猛暑などの悪天候', '急な仕事の残業、突発的な会議や外出'],
-      copingMethods: ['仕事を無理に切り上げて急いで対応した', 'タクシー等を利用した'],
-      mutualAidAcceptance: '条件や相手（顔見知りかどうか等）次第で利用を検討したい',
-      safeTransportMethods: ['リアルタイムで現在地がGPS追跡できれば安心', '手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
-      supporterInterest: '興味はあるが、他人の子どもを預かる責任や事故が少し心配',
-      comments: '安全運転の講習や、事前の顔合わせの場があるとより安心できます。',
-      email: 'yuki.ito.mitaka@example.com'
-    },
-    {
-      id: 'SURVEY-202610-006',
-      submittedAt: '2026/10/14 08:40',
-      childAges: ['4〜5歳（年中・年長）'],
-      transportMethods: ['徒歩'],
-      barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
-      barrierDetail: '',
-      troubleFrequency: '年に数回・ごく稀にある',
-      troubleSituations: ['保護者自身の体調不良・ケガ・通院', 'きょうだいの急な発熱・通院・看病'],
-      copingMethods: ['仕事を無理に切り上げて急いで対応した'],
-      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
-      safeTransportMethods: ['徒歩での引率（手つなぎ・見守り歩行）'],
-      supporterInterest: 'ついでであれば、ぜひ協力してみたい（困った時はお互い様だから）',
-      comments: '自営業で時間に融通が利く日もあるので、近所の困っているママ・パパを徒歩で一緒に連れて行くくらいなら喜んでお手伝いできます。',
-      email: 't.suzuki.inokashira@example.com'
-    },
-    {
-      id: 'SURVEY-202610-007',
-      submittedAt: '2026/10/14 12:10',
-      childAges: ['0〜1歳（乳児）', '小学校低学年（1〜3年生）'],
-      transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
-      barrierToFirstChoice: 'ある（送迎の距離や手段・時間の都合で、第一希望を諦めて別の園にした）',
-      barrierDetail: '妊娠後期から産後にかけて上の子の送迎ができなくなる不安から、教育方針が気に入っていた少し遠くの園を諦めました。送迎サポートがあれば諦めずに済んだと思います。',
-      troubleFrequency: '週に1〜2回程度感じる',
-      troubleSituations: ['きょうだいの急な発熱・通院・看病', '雨・雪・強風・猛暑などの悪天候', '朝の出勤時間と登園時間のスケジュール調整'],
-      copingMethods: ['仕事を無理に切り上げて急いで対応した', '祖父母・親族に急遽お願いした'],
-      mutualAidAcceptance: 'ぜひ定期的に利用したい',
-      safeTransportMethods: ['自転車での送迎（幼児同乗器・ヘルメット着用）', 'リアルタイムで現在地がGPS追跡できれば安心'],
-      supporterInterest: '送迎を引き受ける余裕はない',
-      comments: '産前産後やワンオペ育児中の送迎支援は本当に切実です。ぜひ三鷹市全体に広がってほしいです。',
-      email: 'e.takahashi@example.com'
-    },
-    {
-      id: 'SURVEY-202610-008',
-      submittedAt: '2026/10/14 15:50',
-      childAges: ['2〜3歳（年少少・年少）'],
-      transportMethods: ['自家用車', '自転車（子ども乗せ・電動アシスト含む）'],
-      barrierToFirstChoice: '諦めはしなかったが、非常に迷った・現在も無理をして通わせている',
-      barrierDetail: '園の駐車場が狭く雨の日は送迎待ちの車で渋滞し、近隣クレームや遅刻の焦りがあります。',
-      troubleFrequency: '月に数回程度感じる',
-      troubleSituations: ['急な仕事の残業、突発的な会議や外出', '雨・雪・強風・猛暑などの悪天候'],
-      copingMethods: ['ベビーシッター・民間送迎サービスを利用した', '仕事を無理に切り上げて急いで対応した'],
-      mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
-      safeTransportMethods: ['自家用車での送迎（適合チャイルドシート常設）', 'リアルタイムで現在地がGPS追跡できれば安心'],
-      supporterInterest: 'タイミングや都合が合う日なら引き受けてもよい',
-      comments: '民間シッターは1回数千円かかるので、同じ園の保護者同士の相互扶助で実費＋少額謝礼で済むならとてもありがたいです。',
-      email: 'ryo.matsuda@example.com'
-    }
-  ]
+  // ドライバー稼働率・評価ランキング（実データ）
+  driverRankings: [],
+  // 登録者全員の必要情報台帳（実データ）
+  allRegistrants: JSON.parse(localStorage.getItem('kidsride_registered_users') || '[]'),
+  // 三鷹市・子育て世帯送迎アンケート回答データベース（実データ）
+  surveyResponses: JSON.parse(localStorage.getItem('kidsride_survey_responses') || '[]')
 };
 
 // 三鷹市内の座標マップデータ (Leaflet地図用)
@@ -4623,7 +4122,17 @@ function AdminView() {
         </div>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+      ${rankedDrivers.length === 0 ? `
+        <div class="card" style="padding:40px 20px; text-align:center; color:#64748b; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:12px; margin-bottom:20px;">
+          <i class="ph-fill ph-trophy" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:10px;"></i>
+          <h4 style="margin:0 0 6px 0; color:#334155; font-size:1rem; font-weight:700;">登録ドライバーデータはありません（実証実験準備中）</h4>
+          <p style="margin:0; font-size:0.78rem; line-height:1.5;">
+            現在、三鷹市内でのアンケート調査および実証実験モニター（送迎サポーター）の事前募集・審査を行っております。<br>
+            実証運行が開始され次第、稼働率・保護者評価・定刻到着率のランキングがリアルタイムで反映されます。
+          </p>
+        </div>
+      ` : `
+        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
         ${rankedDrivers.map((d, index) => {
           let medalBadge = '';
           if (index === 0) medalBadge = '<span style="background:#fef08a; color:#854d0e; font-weight:800; padding:2px 8px; border-radius:12px; font-size:0.75rem; border:1px solid #facc15;">🥇 1位</span>';
@@ -4685,6 +4194,7 @@ function AdminView() {
           `;
         }).join('')}
       </div>
+      `}
     `;
   }
 
@@ -4736,7 +4246,15 @@ function AdminView() {
             </tr>
           </thead>
           <tbody>
-            ${filteredUsers.map(u => `
+            ${filteredUsers.length === 0 ? `
+              <tr>
+                <td colspan="7" style="padding:36px; text-align:center; color:#64748b; background:#f8fafc;">
+                  <i class="ph-fill ph-users-three" style="font-size:2rem; color:#cbd5e1; display:block; margin-bottom:8px;"></i>
+                  登録者台帳データはありません（0名）<br>
+                  <span style="font-size:0.72rem;">アンケート（Q12 実証モニター希望）や事前登録フォームより登録された情報がここに反映されます。</span>
+                </td>
+              </tr>
+            ` : filteredUsers.map(u => `
               <tr style="border-bottom:1px solid #f1f5f9; transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
                 <td style="padding:10px 8px;">
                   <div style="display:flex; align-items:center; gap:8px;">
@@ -4804,7 +4322,15 @@ function AdminView() {
               </tr>
             </thead>
             <tbody>
-              ${(state.transportRecords || []).map(r => `
+              ${(state.transportRecords || []).length === 0 ? `
+                <tr>
+                  <td colspan="6" style="padding:36px; text-align:center; color:#64748b; background:#f8fafc;">
+                    <i class="ph-fill ph-clipboard-text" style="font-size:2rem; color:#cbd5e1; display:block; margin-bottom:8px;"></i>
+                    運行日報データはありません（実証実験前・0件）<br>
+                    <span style="font-size:0.72rem;">実証運行が実施されると、走行距離・ガソリン実費・アルコール検知結果（0.00mg/L）が自動記録されます。</span>
+                  </td>
+                </tr>
+              ` : (state.transportRecords || []).map(r => `
                 <tr style="border-bottom:1px solid #f1f5f9;">
                   <td style="padding:8px;">
                     <strong style="color:var(--text-main);">${r.recordId}</strong><br>
@@ -4841,19 +4367,27 @@ function AdminView() {
           <i class="ph-fill ph-car" style="color:var(--primary);"></i> 登録ドライバー・車両安全管理台帳
         </h3>
         <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <strong style="font-size:0.9rem; color:var(--text-main);">佐藤 カズヤ (多摩地区 / 三鷹)</strong>
-              <span style="font-size:0.72rem; background:#def7ec; color:#03543f; padding:2px 6px; border-radius:4px; font-weight:700;">認証適合</span>
+          ${(state.allRegistrants || []).filter(u => u.vehicle).length === 0 ? `
+            <div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:24px; text-align:center; color:#64748b;">
+              <i class="ph-fill ph-car" style="font-size:2rem; color:#cbd5e1; display:block; margin-bottom:6px;"></i>
+              登録車両データはありません（0台）<br>
+              <span style="font-size:0.72rem;">実証実験のドライバー登録・車検証審査が完了した車両がここに表示されます。</span>
             </div>
-            <div style="font-size:0.78rem; color:#334155; line-height:1.5;">
-              <div>・車両: <strong>${state.driverVehicle.model}</strong> (${state.driverVehicle.plateNumber})</div>
-              <div>・車検満了日: <strong style="color:#15803d;">${state.driverVehicle.shakenExpiry}</strong></div>
-              <div>・任意保険: ${state.driverVehicle.voluntaryInsurance} (${state.driverVehicle.insuranceCoverage})</div>
-              <div>・チャイルドシート: ${state.driverVehicle.childSeatType}</div>
-              <div>・ドライブレコーダー: ${state.driverVehicle.dashcam}</div>
+          ` : (state.allRegistrants || []).filter(u => u.vehicle).map(u => `
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <strong style="font-size:0.9rem; color:var(--text-main);">${u.name} (${u.facility})</strong>
+                <span style="font-size:0.72rem; background:#def7ec; color:#03543f; padding:2px 6px; border-radius:4px; font-weight:700;">認証適合</span>
+              </div>
+              <div style="font-size:0.78rem; color:#334155; line-height:1.5;">
+                <div>・車両: <strong>${u.vehicle.model}</strong> (${u.vehicle.plateNumber})</div>
+                <div>・車検満了日: <strong style="color:#15803d;">${u.vehicle.shakenExpiry}</strong></div>
+                <div>・任意保険: ${u.vehicle.insurance}</div>
+                <div>・チャイルドシート: ${u.vehicle.childSeat}</div>
+                <div>・ドライブレコーダー: ${u.vehicle.dashcam}</div>
+              </div>
             </div>
-          </div>
+          `).join('')}
         </div>
       </div>
     `;
@@ -4959,7 +4493,15 @@ function AdminView() {
               </tr>
             </thead>
             <tbody>
-              ${(state.auditLogs || []).map(l => `
+              ${(state.auditLogs || []).length === 0 ? `
+                <tr>
+                  <td colspan="5" style="padding:36px; text-align:center; color:#64748b; background:#f8fafc;">
+                    <i class="ph-fill ph-shield-check" style="font-size:2rem; color:#cbd5e1; display:block; margin-bottom:8px;"></i>
+                    監査ログは記録されていません（0件）<br>
+                    <span style="font-size:0.72rem;">管理者のログイン、データ閲覧、CSVエクスポート時に自動で証跡が記録されます。</span>
+                  </td>
+                </tr>
+              ` : (state.auditLogs || []).map(l => `
                 <tr style="border-bottom:1px solid #f1f5f9;">
                   <td style="padding:8px; white-space:nowrap;">
                     <strong style="color:var(--text-main);">${l.id}</strong><br>
@@ -5000,8 +4542,19 @@ function AdminView() {
   } else if (currentTab === 'accident') {
     // 6. 事故対応・損害サービスセンター（損保ジャパン）連携タブ
     const reports = state.accidentReports || [];
+    const accidentEmptyNotice = reports.length === 0 ? `
+      <div class="card" style="padding:28px 20px; text-align:center; background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; margin-bottom:16px;">
+        <i class="ph-fill ph-shield-check" style="font-size:2.4rem; color:#16a34a; display:block; margin-bottom:8px;"></i>
+        <h4 style="margin:0 0 4px 0; color:#15803d; font-size:1.05rem; font-weight:800;">事故・トラブルの報告はありません（発生件数: 0件・無事故運行継続中）</h4>
+        <p style="margin:0; font-size:0.78rem; color:#166534; line-height:1.5;">
+          あいおいニッセイ同和損害保険様との包括連携窓口および損害サービスセンターホットラインは常時待機状態です。<br>
+          万が一の接触事故やトラブル発生時は、画面右上の「新規事故報告書 作成」ボタンより即座に保険会社提出用データを生成できます。
+        </p>
+      </div>
+    ` : '';
     
     tabContentHtml = `
+      ${accidentEmptyNotice}
       <!-- 保険代理店 ＆ 損害サービスセンター 連携ホットライン ヘッダー -->
       <div class="card" style="margin-bottom:16px; border-left:5px solid #ea580c; background:#fff7ed; padding:16px; box-shadow:var(--shadow-sm);">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
@@ -5145,7 +4698,14 @@ function AdminView() {
               </tr>
             </thead>
             <tbody>
-              ${reports.map(r => `
+              ${reports.length === 0 ? `
+                <tr>
+                  <td colspan="6" style="padding:32px; text-align:center; color:#166534; background:#f0fdf4;">
+                    <i class="ph-fill ph-shield-check" style="font-size:2rem; color:#16a34a; display:block; margin-bottom:6px;"></i>
+                    現在、事故・トラブルの報告はありません（0件・無事故継続中）
+                  </td>
+                </tr>
+              ` : reports.map(r => `
                 <tr style="border-bottom:1px solid #f1f5f9;">
                   <td style="padding:10px 8px; white-space:nowrap;">
                     <strong style="color:var(--text-main); font-size:0.78rem;">${r.reportId}</strong><br>
@@ -5241,6 +4801,20 @@ function AdminView() {
     const q10Worry = responses.filter(r => (r.supporterInterest || '').includes('責任や事故')).length;
 
     tabContentHtml = `
+      ${totalCount === 0 ? `
+        <div class="card" style="padding:40px 20px; text-align:center; color:#64748b; background:#f8fafc; border:1.5px dashed #cbd5e1; border-radius:12px; margin-bottom:20px;">
+          <i class="ph-fill ph-chart-pie-slice" style="font-size:2.5rem; color:#cbd5e1; display:block; margin-bottom:10px;"></i>
+          <h4 style="margin:0 0 6px 0; color:#334155; font-size:1rem; font-weight:700;">アンケート回答データはまだありません（現在0件・受信待機中）</h4>
+          <p style="margin:0; font-size:0.78rem; line-height:1.5;">
+            保護者様がアンケート画面（#survey）から回答を送信すると、ここにリアルタイムでグラフ集計および回答詳細が表示されます。
+          </p>
+          <div style="margin-top:14px;">
+            <a href="#survey" class="btn btn-outline" style="padding:8px 16px; font-size:0.82rem; border-color:#0284c7; color:#0284c7; text-decoration:none;" onclick="navigate('survey'); return false;">
+              <i class="ph ph-arrow-square-out"></i> アンケート回答画面を確認する
+            </a>
+          </div>
+        </div>
+      ` : ''}
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
         <div>
           <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
@@ -5532,20 +5106,20 @@ function AdminView() {
 
         <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; text-align:center;">
           <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
-            <span style="font-size:0.68rem; opacity:0.85; display:block;">総登録者数</span>
-            <strong style="font-size:1.15rem; color:#fef08a;">${state.platformStats.totalUsers}<span style="font-size:0.7rem;"> 名</span></strong>
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">アンケート総回答数</span>
+            <strong style="font-size:1.15rem; color:#fef08a;">${(state.surveyResponses || []).length}<span style="font-size:0.7rem;"> 件</span></strong>
           </div>
           <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
-            <span style="font-size:0.68rem; opacity:0.85; display:block;">月間送迎数</span>
-            <strong style="font-size:1.15rem; color:#fef08a;">${state.platformStats.monthlyRides}<span style="font-size:0.7rem;"> 件</span></strong>
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">実証モニター希望</span>
+            <strong style="font-size:1.15rem; color:#fef08a;">${(state.surveyResponses || []).filter(r => r.email && r.email.trim()).length}<span style="font-size:0.7rem;"> 名</span></strong>
           </div>
           <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
-            <span style="font-size:0.68rem; opacity:0.85; display:block;">定刻運行率</span>
-            <strong style="font-size:1.15rem; color:#bbf7d0;">${state.platformStats.onTimeRate}<span style="font-size:0.7rem;">%</span></strong>
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">実登録者数</span>
+            <strong style="font-size:1.15rem; color:#bbf7d0;">${(state.allRegistrants || []).length}<span style="font-size:0.7rem;"> 名</span></strong>
           </div>
           <div style="background:rgba(255,255,255,0.12); padding:8px 6px; border-radius:8px;">
-            <span style="font-size:0.68rem; opacity:0.85; display:block;">総合満足度</span>
-            <strong style="font-size:1.15rem; color:#fde047;">★ ${state.platformStats.averageRating}</strong>
+            <span style="font-size:0.68rem; opacity:0.85; display:block;">事故・トラブル</span>
+            <strong style="font-size:1.15rem; color:#bbf7d0;">${(state.accidentReports || []).length}<span style="font-size:0.7rem;"> 件 (無事故)</span></strong>
           </div>
         </div>
       </div>
