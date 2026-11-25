@@ -3845,7 +3845,7 @@ window.submitSurveyForm = function(event) {
           <h3 style="font-size:1.25rem; font-weight:800; color:#0f172a; margin-bottom:8px;">ご回答ありがとうございました！</h3>
           <p style="font-size:0.85rem; color:#475569; line-height:1.6; margin-bottom:16px;">
             お忙しい中、アンケートにご協力いただき心より感謝申し上げます。<br>
-            皆様からいただいた貴重なご意見は、三鷹市子ども政策部への実態報告および、安心・安全な互助送迎モデルの設計に大切に活用させていただきます。
+            皆様からいただいた貴重なご意見は、地域コミュニティにおける安心・安全な子ども送迎互助モデルの設計に大切に活用させていただきます。
           </p>
           ${email.trim() ? `
             <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px; margin-bottom:16px; font-size:0.8rem; color:#166534; text-align:left;">
