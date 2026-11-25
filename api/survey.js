@@ -8,7 +8,7 @@ let surveyStore = [
   {
     id: 'SURVEY-20261125-01',
     submittedAt: '2026/11/25 20:00',
-    name: '川越石 様',
+    name: '皮籠石 様 (kawagoishi)',
     childAges: ['年少（3〜4歳）'],
     kindergarten: '三鷹市立あゆみ保育園',
     transportMethods: ['電動アシスト自転車', '徒歩'],
