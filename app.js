@@ -238,6 +238,7 @@ const INITIAL_SURVEY_RESPONSES = [
   {
     id: 'SURVEY-20261125-01',
     submittedAt: '2026/11/25 20:00',
+    name: '川越石 様',
     childAges: ['年少（3〜4歳）'],
     kindergarten: '三鷹市立あゆみ保育園',
     transportMethods: ['電動アシスト自転車', '徒歩'],
@@ -252,6 +253,63 @@ const INITIAL_SURVEY_RESPONSES = [
     supporterInterest: '時間やルートが合えば「ついで送迎」に協力できる',
     comments: '自分が行けない時間にお迎えに行ってもらって助かったり、逆に行ける日は他のお子さんも一緒に連れて帰ったりできたらとても心強いです。ぜひ三鷹市内で実現してほしいです。',
     email: 'kawagoishi@gmail.com'
+  },
+  {
+    id: 'SURVEY-20261125-02',
+    submittedAt: '2026/11/25 20:10',
+    name: '藤原 萌子 様 (moeko fujiwara)',
+    childAges: ['年中（4〜5歳）'],
+    kindergarten: '三鷹市立あゆみ保育園周辺',
+    transportMethods: ['自転車（子ども乗せ・電動含む）', '徒歩'],
+    barrierToFirstChoice: 'はい（第一希望を断念した経験がある）',
+    barrierDetail: '第一希望園は自宅から距離があり、雨天時の自転車送迎や仕事残業時のお迎えが間に合わないため諦めました。',
+    troubleFrequency: '週に1〜2回程度',
+    troubleSituations: ['雨や悪天候時', '急な残業・突発的な仕事の都合'],
+    copingMethods: ['仕事を無理に切り上げる / 早退する'],
+    mutualAidAcceptance: 'ぜひ利用したい（条件が合えば日常的に利用したい）',
+    nobinobiStay: '利用したい（お迎えに行ってもらえるなら利用したい）',
+    safeTransportMethods: ['近隣の顔見知り・審査済みの保護者による送迎', 'リアルタイムGPS位置追跡'],
+    supporterInterest: '時間やルートが合えば「ついで送迎」に協力できる',
+    comments: '同じ園や近所のママ同士で助け合える仕組みがあれば、雨の日や急な残業の時に本当に助かります。ぜひ実現してほしいです。',
+    email: 'moeko.fujiwara@kidsride-monitor.jp'
+  },
+  {
+    id: 'SURVEY-20261125-03',
+    submittedAt: '2026/11/25 20:25',
+    name: '溝尻 祥子 様 (mizojiri shoko)',
+    childAges: ['年少（3〜4歳）'],
+    kindergarten: '三鷹市内認可保育園',
+    transportMethods: ['電動アシスト自転車'],
+    barrierToFirstChoice: 'はい（第一希望を断念した経験がある）',
+    barrierDetail: 'お迎えの時間制限と自宅からのルートの都合で、希望の園を断念せざるを得ませんでした。',
+    troubleFrequency: '週に1回程度',
+    troubleSituations: ['兄弟・姉妹の急な発熱・通院・看病', '急な残業・仕事の都合'],
+    copingMethods: ['家族や親戚に急遽お願いした', '仕事を無理に切り上げた'],
+    mutualAidAcceptance: 'ぜひ利用したい（条件が合えば日常的に利用したい）',
+    nobinobiStay: '状況によっては利用したい',
+    safeTransportMethods: ['GPSによるリアルタイム位置追跡', '最高2億円の包括損害保険の適用'],
+    supporterInterest: '時間やタイミングが合えば協力したい',
+    comments: '兄弟がいると1人が熱を出した時に登降園が本当に大変なので、信頼できる保護者間での送迎サポートをぜひ三鷹でスタートしてほしいです。',
+    email: 'mizojiri.shoko@kidsride-monitor.jp'
+  },
+  {
+    id: 'SURVEY-20261125-04',
+    submittedAt: '2026/11/25 20:40',
+    name: '高橋 由紀子 様 (yukiko takahashi)',
+    childAges: ['年長（5〜6歳）', '2歳児（未満児）'],
+    kindergarten: '三鷹市立保育施設',
+    transportMethods: ['徒歩', '自転車'],
+    barrierToFirstChoice: 'なかった（通いやすさ・近さを最優先にした）',
+    barrierDetail: '',
+    troubleFrequency: '月に数回程度',
+    troubleSituations: ['保護者自身の体調不良・ケガ・通院', '夕方の急な雨・強風'],
+    copingMethods: ['仕事を無理に切り上げて急いで対応した'],
+    mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
+    nobinobiStay: '利用したい（お迎えに行ってもらえるなら利用したい）',
+    safeTransportMethods: ['徒歩での見守り・引率（手つなぎ歩行）', '同じ園や顔見知りの保護者であれば安心'],
+    supporterInterest: 'ついでであれば、喜んで協力したい（困った時はお互い様だから）',
+    comments: '下の子の送迎のついでに、同じ方向のお友達を一緒に連れて帰るくらいなら気軽に協力できます。困ったときはお互い様の関係が地域にできたら嬉しいです。',
+    email: 'yukiko.takahashi@kidsride-monitor.jp'
   }
 ];
 
@@ -5318,7 +5376,8 @@ function AdminView() {
                     </td>
                     <td style="padding:10px 8px; white-space:nowrap;">${(r.supporterInterest || '').slice(0, 10)}...</td>
                     <td style="padding:10px 8px; white-space:nowrap;">
-                      ${r.email ? `<span style="color:#0284c7; font-weight:700;"><i class="ph ph-envelope"></i> ${r.email}</span>` : '<span style="color:#94a3b8;">未入力</span>'}
+                      ${r.name ? `<strong style="display:block; color:#0f172a; font-size:0.76rem; margin-bottom:2px;"><i class="ph-fill ph-user" style="color:#0284c7;"></i> ${r.name}</strong>` : ''}
+                      ${r.email ? `<span style="color:#0284c7; font-weight:600; font-size:0.7rem;"><i class="ph ph-envelope"></i> ${r.email}</span>` : '<span style="color:#94a3b8;">未入力</span>'}
                     </td>
                     <td style="padding:10px 8px; text-align:center; white-space:nowrap;">
                       <button class="btn btn-outline" style="border-color:#0284c7; color:#0284c7; padding:4px 8px; font-size:0.7rem; width:auto; font-weight:700;" onclick="showSurveyDetailModal('${r.id}')">
