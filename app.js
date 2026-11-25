@@ -189,6 +189,28 @@ function getInitialRoute() {
   return 'login';
 }
 
+// 受領済みの実アンケート回答（知人様・モニター登録済みデータ等のシード保持）
+const INITIAL_SURVEY_RESPONSES = [
+  {
+    id: 'SURVEY-20261125-01',
+    submittedAt: '2026/11/25 20:00',
+    childAges: ['年少（3〜4歳）'],
+    kindergarten: '三鷹市立あゆみ保育園',
+    transportMethods: ['電動アシスト自転車', '徒歩'],
+    barrierToFirstChoice: 'はい（第一希望を断念した経験がある）',
+    barrierDetail: '自宅からの距離があり、雨の日や仕事延長時の送迎が物理的に困難だったため。',
+    troubleFrequency: '週に1〜2回程度',
+    troubleSituations: ['急な残業・仕事の都合', '雨や悪天候時', '兄弟・姉妹の体調不良時'],
+    copingMethods: ['仕事を無理に切り上げる / 早退する', '家族や親戚に頼む'],
+    mutualAidAcceptance: 'ぜひ利用したい（条件が合えば日常的に利用したい）',
+    nobinobiStay: '利用したい（お迎えに行ってもらえるなら利用したい）',
+    safeTransportMethods: ['近隣の顔見知り・審査済みの保護者による送迎', 'GPSによるリアルタイム位置追跡'],
+    supporterInterest: '時間やルートが合えば「ついで送迎」に協力できる',
+    comments: '自分が行けない時間にお迎えに行ってもらって助かったり、逆に行ける日は他のお子さんも一緒に連れて帰ったりできたらとても心強いです。ぜひ三鷹市内で実現してほしいです。',
+    email: 'kawagoishi@gmail.com'
+  }
+];
+
 // 状態管理 (State management)
 const state = {
   currentRoute: getInitialRoute(),
@@ -365,8 +387,20 @@ const state = {
   driverRankings: [],
   // 登録者全員の必要情報台帳（実データ）
   allRegistrants: JSON.parse(localStorage.getItem('kidsride_registered_users') || '[]'),
-  // 三鷹市・子育て世帯送迎アンケート回答データベース（実データ）
-  surveyResponses: JSON.parse(localStorage.getItem('kidsride_survey_responses') || '[]')
+  // 三鷹市・子育て世帯送迎アンケート回答データベース（実データ・知人様回答を含むシードとマージ）
+  surveyResponses: (function() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('kidsride_survey_responses') || '[]');
+      const map = new Map();
+      INITIAL_SURVEY_RESPONSES.forEach(r => map.set(r.id, r));
+      if (Array.isArray(saved)) {
+        saved.forEach(r => map.set(r.id, r));
+      }
+      return Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+    } catch (e) {
+      return INITIAL_SURVEY_RESPONSES;
+    }
+  })()
 };
 
 // 三鷹市内の座標マップデータ (Leaflet地図用)
@@ -4984,7 +5018,7 @@ function AdminView() {
           <h3 style="margin:0; font-size:1.05rem; color:var(--text-main); font-weight:700; display:flex; align-items:center; gap:6px;">
             <i class="ph-fill ph-chart-pie-slice" style="color:#0284c7;"></i> 【三鷹市】通園・送迎アンケート実態調査 集計ダッシュボード
           </h3>
-          <span style="font-size:0.75rem; color:var(--text-muted);">三鷹市子ども政策部への事前相談・保育園説明および実証実験モニター抽出用リアルタイムデータ</span>
+          <span style="font-size:0.75rem; color:var(--text-muted);">地域互助・民間主導の子育て支援モデル設計および実証実験モニター集計リアルタイムデータ</span>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#0284c7; color:#0284c7; display:flex; align-items:center; gap:4px; font-weight:700;" onclick="window.syncServerSurveyResponses(true)">
@@ -4992,6 +5026,9 @@ function AdminView() {
           </button>
           <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#16a34a; color:#16a34a; display:flex; align-items:center; gap:4px;" onclick="window.openGasSettingModal()">
             <i class="ph ph-table"></i> スプレッドシート連携 (GAS設定)
+          </button>
+          <button class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#059669; color:#059669; display:flex; align-items:center; gap:4px;" onclick="window.copySurveyTsvForSheets()">
+            <i class="ph ph-copy"></i> スプレッドシート貼付用コピー
           </button>
           <a href="#survey" class="btn btn-outline" style="padding:6px 12px; font-size:0.78rem; width:auto; border-color:#0284c7; color:#0284c7; display:flex; align-items:center; gap:4px; text-decoration:none;" onclick="navigate('survey'); return false;">
             <i class="ph ph-arrow-square-out"></i> アンケート画面を開く
@@ -7133,15 +7170,52 @@ window.exportSurveyCSV = function() {
       action: 'EXPORT_CSV',
       target: '三鷹市保護者アンケート回答集計',
       ip: '192.168.1.104',
-      details: `保護者アンケート回答集計(${responses.length}件)をCSV出力。三鷹市子ども政策部への相談・エビデンス資料対応。`
+      details: `保護者アンケート回答集計(${responses.length}件)をCSV出力。地域送迎互助モデル分析・実証実験準備用資料。`
     });
     localStorage.setItem('kidsride_audit_logs', JSON.stringify(state.auditLogs));
   }
 
   showCustomAlert(
     'アンケート回答 CSV出力完了',
-    `三鷹市保護者アンケート回答データ（全${responses.length}件）をCSV出力しました。\nExcelで文字化けせず開けるUTF-8(BOM付き)形式です。三鷹市子ども政策部への相談資料や保育施設への提案資料としてご活用いただけます。`
+    `三鷹市保護者アンケート回答データ（全${responses.length}件）をCSV出力しました。\nExcelで文字化けせず開けるUTF-8(BOM付き)形式です。`
   );
+};
+
+// スプレッドシート貼付用 TSV一括コピー機能
+window.copySurveyTsvForSheets = function() {
+  const responses = state.surveyResponses || [];
+  if (responses.length === 0) {
+    showCustomAlert('データなし', 'コピー対象のアンケート回答がありません。');
+    return;
+  }
+  const headers = [
+    "回答ID", "回答日時", "モニター希望メール", "お子様年齢", "通園施設", "送迎手段", "断念経験", "断念理由詳細",
+    "困る頻度", "困る状況", "対処法", "助け合い利用意向", "のびのび意向", "安心送迎手段", "サポーター関心", "自由記述"
+  ];
+  const rows = responses.map(r => [
+    r.id || '',
+    r.submittedAt || '',
+    r.email || '',
+    (r.childAges || []).join(', '),
+    r.kindergarten || '',
+    (r.transportMethods || []).join(', '),
+    r.barrierToFirstChoice || '',
+    (r.barrierDetail || '').replace(/\t|\r|\n/g, ' '),
+    r.troubleFrequency || '',
+    (r.troubleSituations || []).join(', '),
+    (r.copingMethods || []).join(', '),
+    r.mutualAidAcceptance || '',
+    r.nobinobiStay || '',
+    (r.safeTransportMethods || []).join(', '),
+    r.supporterInterest || '',
+    (r.comments || '').replace(/\t|\r|\n/g, ' ')
+  ]);
+  const tsv = [headers.join('\t'), ...rows.map(row => row.join('\t'))].join('\n');
+  navigator.clipboard.writeText(tsv).then(() => {
+    showCustomAlert('クリップボードにコピーしました！', `全${responses.length}件の回答データをコピーしました。\nGoogleスプレッドシートやExcelのA1セルを選択して「Ctrl+V（Cmd+V）」を押すだけで、そのまま綺麗な表として貼り付けられます！`);
+  }).catch(() => {
+    prompt('以下のテキストを全選択してコピーし、スプレッドシートに貼り付けてください:', tsv);
+  });
 };
 
 // ============================================================================
@@ -7153,8 +7227,8 @@ window.openGasSettingModal = function() {
   
   const modalHtml = `
     <div id="gas-setting-modal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="card" style="max-width:580px; width:100%; padding:24px; background:white; border-radius:16px; box-shadow:var(--shadow-xl); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align:left;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div class="card" style="max-width:620px; width:100%; padding:24px; background:white; border-radius:16px; box-shadow:var(--shadow-xl); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align:left; max-height:90vh; overflow-y:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
           <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0; display:flex; align-items:center; gap:8px;">
             <i class="ph-fill ph-table" style="color:#16a34a;"></i> Googleスプレッドシート自動蓄積 連携設定
           </h3>
@@ -7163,19 +7237,40 @@ window.openGasSettingModal = function() {
           </button>
         </div>
 
-        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:16px; font-size:0.8rem; color:#166534; line-height:1.6;">
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.8rem; color:#166534; line-height:1.6;">
           <strong><i class="ph-fill ph-check-circle"></i> 簡単1分設定:</strong><br>
-          Googleスプレッドシートの「拡張機能 > Apps Script」に専用コードを貼り付けてデプロイするだけで、アンケート回答がリアルタイムに1行ずつ自動蓄積されるようになります。
+          Googleスプレッドシートの「拡張機能 > Apps Script」に専用コードを貼り付けてウェブアプリとしてデプロイするだけで、アンケート回答がリアルタイムに1行ずつ自動蓄積されるようになります。
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:0.75rem; font-weight:700; color:#334155;">① Apps Script用スクリプトコード:</span>
+            <button class="btn btn-outline" style="padding:4px 10px; font-size:0.72rem; border-color:#0284c7; color:#0284c7;" onclick="window.copyGasCode()">
+              <i class="ph ph-copy"></i> コードをコピー
+            </button>
+          </div>
+          <span style="display:block; font-size:0.7rem; color:#64748b; line-height:1.4;">
+            ※上記ボタンでコードをコピーし、スプレッドシートの「拡張機能 > Apps Script」に貼り付けて「デプロイ > 新しいデプロイ（種類: ウェブアプリ、アクセス: 全員）」でURLを取得してください。
+          </span>
         </div>
 
         <div style="margin-bottom:16px;">
           <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:6px;">
-            Google Apps Script ウェブアプリURL:
+            ② Google Apps Script ウェブアプリURL:
           </label>
           <input type="url" id="gas-webhook-url-input" class="form-control" placeholder="https://script.google.com/macros/s/AKfycb.../exec" value="${currentUrl}" style="width:100%; font-size:0.85rem; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
           <span style="display:block; font-size:0.72rem; color:#64748b; margin-top:4px;">
-            ※設定コードはプロジェクト内の <code>docs/GOOGLE_APPS_SCRIPT_SURVEY.js</code> に用意されています。
+            ※ここに貼り付けて保存すると、バックエンドサーバーにも同期され全端末からの回答がスプレッドシートに届きます。
           </span>
+        </div>
+
+        <div style="border-top:1px solid #e2e8f0; padding-top:14px; margin-bottom:14px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-outline" style="border-color:#16a34a; color:#16a34a; font-size:0.78rem; padding:6px 12px;" onclick="window.sendAllSurveysToGas()">
+            <i class="ph ph-paper-plane-tilt"></i> 既存の全回答をスプレッドシートへ送信
+          </button>
+          <button class="btn btn-outline" style="border-color:#0284c7; color:#0284c7; font-size:0.78rem; padding:6px 12px;" onclick="window.copySurveyTsvForSheets()">
+            <i class="ph ph-copy"></i> 表形式TSVコピー (手動貼付用)
+          </button>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
@@ -7199,7 +7294,7 @@ window.openGasSettingModal = function() {
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
-window.saveGasWebhookUrl = function() {
+window.saveGasWebhookUrl = async function() {
   const input = document.getElementById('gas-webhook-url-input');
   if (!input) return;
   const val = input.value.trim();
@@ -7209,13 +7304,84 @@ window.saveGasWebhookUrl = function() {
   }
   if (val) {
     localStorage.setItem('kidsride_custom_gas_url', val);
-    showCustomAlert('保存完了', 'Googleスプレッドシート連携URLを設定しました。\n今後送信されるすべてのアンケート回答がスプレッドシートにリアルタイム自動追記されます！');
+    try {
+      await fetch('/api/survey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set_webhook', webhookUrl: val })
+      });
+    } catch (e) {
+      console.warn('Webhook sync error:', e);
+    }
+    showCustomAlert('保存完了', 'Googleスプレッドシート連携URLを設定・サーバー同期しました。\n今後送信されるすべてのアンケート回答がスプレッドシートにリアルタイム自動追記されます！');
   } else {
     localStorage.removeItem('kidsride_custom_gas_url');
     showCustomAlert('クリア', '連携URLをクリアしました。');
   }
   const modal = document.getElementById('gas-setting-modal');
   if (modal) modal.remove();
+};
+
+window.sendAllSurveysToGas = async function() {
+  const url = localStorage.getItem('kidsride_custom_gas_url');
+  if (!url || !url.startsWith('https://script.google.com/')) {
+    alert('まずは上部にGoogle Apps ScriptのURLを入力して「設定を保存する」をクリックしてください。');
+    return;
+  }
+  const responses = state.surveyResponses || [];
+  if (responses.length === 0) {
+    alert('送信する回答データがありません。');
+    return;
+  }
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(responses)
+    });
+    showCustomAlert('一括送信完了', `現在保持されている全${responses.length}件の回答データをGoogleスプレッドシートへ送信しました！\nスプレッドシートを開いてご確認ください。`);
+  } catch (err) {
+    alert('送信に失敗しました: ' + err.message);
+  }
+};
+
+window.copyGasCode = function() {
+  const code = `function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow(["回答ID","回答日時","メールアドレス","お子様の学年","園名","送迎手段","断念経験","断念理由","困る頻度","困る状況","対処法","助け合い利用意向","のびのび意向","安心送迎手段","サポーター関心","自由記述","受信日時"]);
+      var headerRange = sheet.getRange(1, 1, 1, 17);
+      headerRange.setBackground("#ea580c").setFontColor("#ffffff").setFontWeight("bold");
+      sheet.setFrozenRows(1);
+    }
+    var data = JSON.parse(e.postData.contents);
+    var list = Array.isArray(data) ? data : [data];
+    list.forEach(function(d) {
+      sheet.appendRow([
+        d.id||"", d.submittedAt||new Date().toLocaleString("ja-JP"), d.email||"",
+        Array.isArray(d.childAges)?d.childAges.join(", "):(d.childAges||""),
+        d.kindergarten||"",
+        Array.isArray(d.transportMethods)?d.transportMethods.join(", "):(d.transportMethods||""),
+        d.barrierToFirstChoice||"", d.barrierDetail||"", d.troubleFrequency||"",
+        Array.isArray(d.troubleSituations)?d.troubleSituations.join(", "):(d.troubleSituations||""),
+        Array.isArray(d.copingMethods)?d.copingMethods.join(", "):(d.copingMethods||""),
+        d.mutualAidAcceptance||"", d.nobinobiStay||"",
+        Array.isArray(d.safeTransportMethods)?d.safeTransportMethods.join(", "):(d.safeTransportMethods||""),
+        d.supporterInterest||"", d.comments||"", new Date().toISOString()
+      ]);
+    });
+    return ContentService.createTextOutput(JSON.stringify({status:"success"})).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status:"error",message:err.toString()})).setMimeType(ContentService.MimeType.JSON);
+  }
+}`;
+  navigator.clipboard.writeText(code).then(() => {
+    alert('Google Apps Scriptコードをクリップボードにコピーしました！\\nGoogleスプレッドシートの「拡張機能 > Apps Script」に貼り付けてデプロイしてください。');
+  }).catch(() => {
+    prompt('以下のコードをコピーしてください:', code);
+  });
 };
 
 // URLハッシュ＆クエリ判定（#admin または #survey）
@@ -7358,21 +7524,22 @@ window.syncServerSurveyResponses = async function(showFeedback = false) {
     const res = await fetch('/api/survey');
     if (res.ok) {
       const data = await res.json();
-      if (data && Array.isArray(data.responses) && data.responses.length > 0) {
-        const map = new Map();
-        (state.surveyResponses || []).forEach(r => map.set(r.id, r));
+      const map = new Map();
+      INITIAL_SURVEY_RESPONSES.forEach(r => map.set(r.id, r));
+      (state.surveyResponses || []).forEach(r => map.set(r.id, r));
+      if (data && Array.isArray(data.responses)) {
         data.responses.forEach(r => map.set(r.id, r));
-        state.surveyResponses = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
-        localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));
-        if (showFeedback) {
-          window.showCustomAlert('同期完了', `サーバーから最新の回答データ（計 ${state.surveyResponses.length} 件）を取得・反映しました。`);
-        }
-        render();
-        return;
       }
+      state.surveyResponses = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+      localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));
+      if (showFeedback) {
+        window.showCustomAlert('同期完了', `サーバーから最新の回答データ（計 ${state.surveyResponses.length} 件）を取得・反映しました。`);
+      }
+      render();
+      return;
     }
     if (showFeedback) {
-      window.showCustomAlert('同期完了', `現在サーバー上に保持されている最新回答（計 ${(state.surveyResponses || []).length} 件）を表示しています。`);
+      window.showCustomAlert('同期完了', `現在保持されている回答データ（計 ${(state.surveyResponses || []).length} 件）を表示しています。`);
     }
   } catch (err) {
     console.warn('Survey sync error:', err);
@@ -7382,9 +7549,15 @@ window.syncServerSurveyResponses = async function(showFeedback = false) {
   }
 };
 
-// 管理画面表示時にバックグラウンドで自動同期実行
+// 管理画面表示時・初期ロード時に自動同期実行
 window.addEventListener('hashchange', function() {
   if (window.location.hash.includes('admin')) {
+    window.syncServerSurveyResponses(false);
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.location.hash.includes('admin') || window.location.href.includes('admin')) {
     window.syncServerSurveyResponses(false);
   }
 });
