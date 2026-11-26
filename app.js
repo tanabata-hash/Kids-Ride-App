@@ -24,22 +24,23 @@
         }
       }
 
-      // 2. ローカルストレージ内の実回答救出 & example.com ダミーの永久抹消
+      // 2. ローカルストレージ内の実回答救出 & example.com ダミー抹消 & 架空ドメインメールの修正
       const raw = localStorage.getItem('kidsride_survey_responses');
       if (!raw) return;
       let localSurveys = JSON.parse(raw);
       if (Array.isArray(localSurveys)) {
         localSurveys = localSurveys.filter(s => !s.email || !s.email.includes('example.com'));
+        localSurveys.forEach(s => {
+          if (s.email && s.email.includes('kidsride-monitor.jp')) {
+            s.email = '';
+          }
+        });
 
-        const emailSeen = new Set();
+        const idSeen = new Set();
         const deduped = [];
         localSurveys.forEach(s => {
-          if (s.email && s.email.trim()) {
-            if (!emailSeen.has(s.email.trim())) {
-              emailSeen.add(s.email.trim());
-              deduped.push(s);
-            }
-          } else {
+          if (!idSeen.has(s.id)) {
+            idSeen.add(s.id);
             deduped.push(s);
           }
         });
@@ -296,7 +297,7 @@ const INITIAL_SURVEY_RESPONSES = [
     safeTransportMethods: ['近隣の顔見知り・審査済みの保護者による送迎', 'リアルタイムGPS位置追跡'],
     supporterInterest: '時間やルートが合えば「ついで送迎」に協力できる',
     comments: '同じ園や近所のママ同士で助け合える仕組みがあれば、雨の日や急な残業の時に本当に助かります。ぜひ実現してほしいです。',
-    email: 'moeko.fujiwara@kidsride-monitor.jp'
+    email: ''
   },
   {
     id: 'SURVEY-20261125-03',
@@ -315,7 +316,7 @@ const INITIAL_SURVEY_RESPONSES = [
     safeTransportMethods: ['GPSによるリアルタイム位置追跡', '最高2億円の包括損害保険の適用'],
     supporterInterest: '時間やタイミングが合えば協力したい',
     comments: '兄弟がいると1人が熱を出した時に登降園が本当に大変なので、信頼できる保護者間での送迎サポートをぜひ三鷹でスタートしてほしいです。',
-    email: 'mizojiri.shoko@kidsride-monitor.jp'
+    email: ''
   },
   {
     id: 'SURVEY-20261125-04',
@@ -334,7 +335,7 @@ const INITIAL_SURVEY_RESPONSES = [
     safeTransportMethods: ['徒歩での見守り・引率（手つなぎ歩行）', '同じ園や顔見知りの保護者であれば安心'],
     supporterInterest: 'ついでであれば、喜んで協力したい（困った時はお互い様だから）',
     comments: '下の子の送迎のついでに、同じ方向のお友達を一緒に連れて帰るくらいなら気軽に協力できます。困ったときはお互い様の関係が地域にできたら嬉しいです。',
-    email: 'yukiko.takahashi@kidsride-monitor.jp'
+    email: ''
   }
 ];
 
@@ -521,13 +522,20 @@ const state = {
       const map = new Map();
       INITIAL_SURVEY_RESPONSES.forEach(r => {
         if (!r.email || !r.email.includes('example.com')) {
-          map.set(r.email ? r.email.trim() : r.id, r);
+          if (r.email && r.email.includes('kidsride-monitor.jp')) r.email = '';
+          map.set(r.id, Object.assign({}, r));
         }
       });
       if (Array.isArray(saved)) {
         saved.forEach(r => {
           if (!r.email || !r.email.includes('example.com')) {
-            map.set(r.email ? r.email.trim() : r.id, r);
+            if (r.email && r.email.includes('kidsride-monitor.jp')) r.email = '';
+            const existing = map.get(r.id);
+            if (existing) {
+              map.set(r.id, Object.assign({}, existing, r, { email: existing.email || (r.email && !r.email.includes('kidsride-monitor.jp') ? r.email : '') }));
+            } else {
+              map.set(r.id, r);
+            }
           }
         });
       }
@@ -4108,12 +4116,10 @@ window.showSurveyDetailModal = function(id) {
               <div style="color:#78350f; line-height:1.5;">${r.comments}</div>
             </div>
           ` : ''}
-          ${r.email ? `
-            <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:10px 12px; border-radius:8px;">
-              <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q12. モニター希望メールアドレス:</strong>
-              <div style="font-weight:700; color:#0284c7;">${r.email}</div>
-            </div>
-          ` : ''}
+          <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:10px 12px; border-radius:8px;">
+            <strong style="color:#0369a1; display:block; margin-bottom:4px;">Q12. モニター希望メールアドレス:</strong>
+            ${r.email ? `<div style="font-weight:700; color:#0284c7;">${r.email}</div>` : `<div style="color:#64748b; font-size:0.85rem;">未登録（LINE等の直接連絡で対応）</div>`}
+          </div>
         </div>
 
         <div style="margin-top:18px; text-align:right;">
@@ -5463,7 +5469,7 @@ function AdminView() {
                     <td style="padding:10px 8px; white-space:nowrap;">${(r.supporterInterest || '').slice(0, 10)}...</td>
                     <td style="padding:10px 8px; white-space:nowrap;">
                       ${r.name ? `<strong style="display:block; color:#0f172a; font-size:0.76rem; margin-bottom:2px;"><i class="ph-fill ph-user" style="color:#0284c7;"></i> ${r.name}</strong>` : ''}
-                      ${r.email ? `<span style="color:#0284c7; font-weight:600; font-size:0.7rem;"><i class="ph ph-envelope"></i> ${r.email}</span>` : '<span style="color:#94a3b8;">未入力</span>'}
+                      ${r.email ? `<span style="color:#0284c7; font-weight:600; font-size:0.7rem;"><i class="ph ph-envelope"></i> ${r.email}</span>` : '<span style="color:#64748b; font-size:0.7rem; background:#f1f5f9; padding:2px 6px; border-radius:4px;">未登録 (LINE連絡)</span>'}
                     </td>
                     <td style="padding:10px 8px; text-align:center; white-space:nowrap;">
                       <button class="btn btn-outline" style="border-color:#0284c7; color:#0284c7; padding:4px 8px; font-size:0.7rem; width:auto; font-weight:700;" onclick="showSurveyDetailModal('${r.id}')">
@@ -7854,22 +7860,23 @@ window.syncServerSurveyResponses = async function(showFeedback = false) {
     if (res.ok) {
       const data = await res.json();
       const map = new Map();
-      INITIAL_SURVEY_RESPONSES.forEach(r => {
+      const sanitizeAndSet = (r) => {
         if (!r.email || !r.email.includes('example.com')) {
-          map.set(r.email ? r.email.trim() : r.id, r);
-        }
-      });
-      (state.surveyResponses || []).forEach(r => {
-        if (!r.email || !r.email.includes('example.com')) {
-          map.set(r.email ? r.email.trim() : r.id, r);
-        }
-      });
-      if (data && Array.isArray(data.responses)) {
-        data.responses.forEach(r => {
-          if (!r.email || !r.email.includes('example.com')) {
-            map.set(r.email ? r.email.trim() : r.id, r);
+          if (r.email && r.email.includes('kidsride-monitor.jp')) {
+            r.email = '';
           }
-        });
+          const existing = map.get(r.id);
+          if (existing) {
+            map.set(r.id, Object.assign({}, existing, r, { email: existing.email || (r.email && !r.email.includes('kidsride-monitor.jp') ? r.email : '') }));
+          } else {
+            map.set(r.id, r);
+          }
+        }
+      };
+      INITIAL_SURVEY_RESPONSES.forEach(sanitizeAndSet);
+      (state.surveyResponses || []).forEach(sanitizeAndSet);
+      if (data && Array.isArray(data.responses)) {
+        data.responses.forEach(sanitizeAndSet);
       }
       state.surveyResponses = Array.from(map.values()).sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
       localStorage.setItem('kidsride_survey_responses', JSON.stringify(state.surveyResponses));

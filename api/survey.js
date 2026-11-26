@@ -41,7 +41,7 @@ let surveyStore = [
     safeTransportMethods: ['近隣の顔見知り・審査済みの保護者による送迎', 'リアルタイムGPS位置追跡'],
     supporterInterest: '時間やルートが合えば「ついで送迎」に協力できる',
     comments: '同じ園や近所のママ同士で助け合える仕組みがあれば、雨の日や急な残業の時に本当に助かります。ぜひ実現してほしいです。',
-    email: 'moeko.fujiwara@kidsride-monitor.jp'
+    email: ''
   },
   {
     id: 'SURVEY-20261125-03',
@@ -60,7 +60,7 @@ let surveyStore = [
     safeTransportMethods: ['GPSによるリアルタイム位置追跡', '最高2億円の包括損害保険の適用'],
     supporterInterest: '時間やタイミングが合えば協力したい',
     comments: '兄弟がいると1人が熱を出した時に登降園が本当に大変なので、信頼できる保護者間での送迎サポートをぜひ三鷹でスタートしてほしいです。',
-    email: 'mizojiri.shoko@kidsride-monitor.jp'
+    email: ''
   },
   {
     id: 'SURVEY-20261125-04',
@@ -79,7 +79,7 @@ let surveyStore = [
     safeTransportMethods: ['徒歩での見守り・引率（手つなぎ歩行）', '同じ園や顔見知りの保護者であれば安心'],
     supporterInterest: 'ついでであれば、喜んで協力したい（困った時はお互い様だから）',
     comments: '下の子の送迎のついでに、同じ方向のお友達を一緒に連れて帰るくらいなら気軽に協力できます。困ったときはお互い様の関係が地域にできたら嬉しいです。',
-    email: 'yukiko.takahashi@kidsride-monitor.jp'
+    email: ''
   }
 ];
 
