@@ -157,7 +157,7 @@ html_request_letter = f"""<!DOCTYPE html>
     </tr>
     <tr>
       <th>回答特典</th>
-      <td>今秋実施予定の「無料実証実験（モニター体験）」への優先案内（ご希望の方のみ）</td>
+      <td>「無料実証実験（モニター体験）」への優先案内（ご希望の方のみ）</td>
     </tr>
   </table>
 </div>
@@ -385,7 +385,7 @@ html_flyer_pop = f"""<!DOCTYPE html>
     <div class="cta-heading">スマホでサクッと回答完了！</div>
     <div style="font-size:8.8pt; line-height:1.45; color:#334155; margin-bottom:6px;">
       個人情報の登録なしで選択肢をタップするだけ。<br>
-      ご希望の方には今秋実施予定の<strong style="color:#0284c7; font-size:9.5pt;">【無料実証実験モニター】</strong>の優先案内をお届けします！
+      ご希望の方には<strong style="color:#0284c7; font-size:9.5pt;">【無料実証実験モニター】</strong>の優先案内をお届けします！
     </div>
     <div style="font-size:8.2pt; color:#64748b;">
       Webから直接回答: <strong style="color:#0284c7;">https://www.kidsride.jp/#survey</strong>

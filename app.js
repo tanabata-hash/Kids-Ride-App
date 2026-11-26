@@ -3844,7 +3844,7 @@ function SurveyView() {
         <div class="card" style="padding:16px; margin-bottom:24px; border-radius:10px; border:1px solid #bae6fd; background:#f0f9ff;">
           <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
             <label style="font-weight:700; font-size:0.9rem; color:#0369a1; line-height:1.4;">
-              Q12. 今後実施予定の「無料実証実験（モニター体験）」の優先案内や詳細情報をご希望の方は、メールアドレスをご記入ください。
+              Q12. 「無料実証実験（モニター体験）」の優先案内や詳細情報をご希望の方は、メールアドレスをご記入ください。
             </label>
             <span style="background:#0284c7; color:white; font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; margin-left:8px;">任意</span>
           </div>

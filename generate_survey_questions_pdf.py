@@ -335,7 +335,7 @@ html_content = """<!DOCTYPE html>
 
 <div class="q-card">
   <div class="q-title">
-    <span>Q12. 今後実施予定の「無料実証実験（モニター体験）」の優先案内を希望される方の連絡先</span>
+    <span>Q12. 「無料実証実験（モニター体験）」の優先案内を希望される方の連絡先</span>
     <span class="q-tag" style="background:#f1f5f9; color:#475569;">任意</span>
   </div>
   <div style="font-size:7.8pt; color:#64748b; margin-top:2px;">
