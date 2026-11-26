@@ -6,15 +6,20 @@ import urllib.request
 OUTPUT_DIR = os.path.expanduser("~/Desktop/KidsRide/KidsRide_アンケート資料")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# 1. QRコード画像を取得してbase64エンコード
-qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://www.kidsride.jp/%23survey"
-try:
-    with urllib.request.urlopen(qr_url) as response:
-        qr_bytes = response.read()
-    qr_base64 = base64.b64encode(qr_bytes).decode('utf-8')
-except Exception as e:
-    print(f"QRコード取得エラー: {e}")
-    qr_base64 = ""
+# 1. ローカルのQRコード画像を取得してbase64エンコード
+local_qr_path = os.path.join(os.path.dirname(__file__), "qr_web_card.png")
+if os.path.exists(local_qr_path):
+    with open(local_qr_path, "rb") as f:
+        qr_base64 = base64.b64encode(f.read()).decode('utf-8')
+else:
+    qr_url = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://www.kidsride.jp/%23survey"
+    try:
+        with urllib.request.urlopen(qr_url) as response:
+            qr_bytes = response.read()
+        qr_base64 = base64.b64encode(qr_bytes).decode('utf-8')
+    except Exception as e:
+        print(f"QRコード取得エラー: {e}")
+        qr_base64 = ""
 
 # ==============================================================================
 # PDF 1: 【園長先生向け 公式依頼状】（A4・ジャスト1ページ）
@@ -137,8 +142,7 @@ html_request_letter = f"""<!DOCTYPE html>
 
 <p>拝啓　貴園におかれましては、三鷹市の子どもたちの健やかな成長と安心・安全な保育環境の充実に尽力され、心より敬意と感謝を申し上げます。</p>
 <p>私ども「一般社団法人KidsRide」は、三鷹市在住の保護者有志が立ち上げた法人です。現在、急な残業やきょうだいの発熱、悪天候などにより保護者の送迎負担が増大する一方、<strong style="color:#0f172a;">園の先生方におかれましても夕方の延長保育対応や遅延連絡への対応など、多大なご負担が生じている</strong>ことと拝察いたします。</p>
-<p>当法人では2026年10月、三鷹市役所子ども育成課と事前相談を実施し、地域における送迎課題や一時預かり施設への送迎ニーズ等について意見交換を行っております。</p>
-<p>そこで、三鷹市への政策提言および安全な地域送迎互助プラットフォーム設計の基礎資料として、貴園の保護者様を対象とするアンケート調査への周知・配架ご協力をお願い申し上げます。敬具</p>
+<p>そこで、地域の実態把握および安全な地域送迎互助プラットフォーム設計の基礎資料として、貴園の保護者様を対象とするアンケート調査への周知・配架ご協力をお願い申し上げます。敬具</p>
 
 <div class="box-card" style="border-left: 4px solid #0284c7;">
   <div class="box-title" style="color:#0369a1;">■ 調査概要</div>
@@ -172,8 +176,7 @@ html_request_letter = f"""<!DOCTYPE html>
 <div class="box-card" style="border-left: 4px solid #f59e0b;">
   <div class="box-title" style="color:#d97706;">■ 貴園へのメリットとお約束事項</div>
   <div style="font-size:7.9pt; line-height:1.4;">
-    <div>✔ <strong>集計結果サマリーの無償提供</strong>：貴園の保護者ニーズを分析したレポートを後日無償提供（園運営や市への要望資料に活用可能）。</div>
-    <div>✔ <strong>三鷹市子ども育成課へのデータ共有</strong>：公立園タクシー送迎課題や、一時預かり（のびのびひろば）への送迎連携策に役立てます。</div>
+    <div>✔ <strong>集計結果サマリーの無償提供</strong>：貴園の保護者ニーズを分析したレポートを後日無償提供（今後の園運営検討に活用可能）。</div>
     <div>✔ <strong>営利営業・勧誘の完全排除</strong>：純粋な実態調査であり、特定の商材販売や個人情報の収集・流用は一切行いません。</div>
   </div>
 </div>
@@ -392,7 +395,7 @@ html_flyer_pop = f"""<!DOCTYPE html>
 
 <div class="meta-footer">
   <div>実施主体: 一般社団法人KidsRide / 代表理事 七夕 光明（三鷹市下連雀在住・保護者）</div>
-  <div>※回答データは統計処理し、三鷹市役所子ども育成課へも共有されます。</div>
+  <div>※回答データは統計処理され、個人情報の登録なしで回答いただけます。</div>
 </div>
 
 </body>
@@ -516,6 +519,8 @@ def generate_pdf(html_text, filename):
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         "--headless",
         "--disable-gpu",
+        "--no-sandbox",
+        "--user-data-dir=/tmp/chrome-pdf-profile",
         "--no-pdf-header-footer",
         f"--print-to-pdf={pdf_file}",
         html_file

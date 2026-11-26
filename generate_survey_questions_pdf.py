@@ -140,8 +140,8 @@ html_content = """<!DOCTYPE html>
 </div>
 
 <div class="intro-box">
-  <strong>【調査趣旨および市役所へのデータ共有について】</strong><br>
-  本アンケートは、三鷹市における保育園・幼稚園・学童等の通園・送迎の実態と保護者ニーズを把握し、地域での安全な送迎互助体制の構築および三鷹市役所子ども育成課への政策提案基礎資料として活用するために実施するものです。個人情報の入力は一切不要（完全無記名）であり、統計処理の上で市役所子ども育成課へもデータを共有いたします。
+  <strong>【調査趣旨および個人情報の取り扱いについて】</strong><br>
+  本アンケートは、三鷹市における保育園・幼稚園・学童等の通園・送迎の実態と保護者ニーズを把握し、地域での安全な送迎互助体制の構築および今後の地域環境改善のための基礎資料として活用するために実施するものです。個人情報の入力は一切不要（完全無記名）であり、統計的に集計処理いたします。
 </div>
 
 <div class="section-badge">1. 基本属性</div>
@@ -248,7 +248,7 @@ html_content = """<!DOCTYPE html>
 
 <div class="page-footer">
   <div>一般社団法人KidsRide（三鷹市下連雀）/ お問い合わせ: info@kids-ride.jp</div>
-  <div>1 / 2 ページ（※三鷹市子ども育成課へのデータ共有を前提とした完全無記名調査）</div>
+  <div>1 / 2 ページ（※完全無記名による実態調査）</div>
 </div>
 
 <!-- ==================== 2ページ目 ==================== -->
@@ -345,7 +345,7 @@ html_content = """<!DOCTYPE html>
 
 <div class="page-footer">
   <div>一般社団法人KidsRide（三鷹市下連雀）/ お問い合わせ: info@kids-ride.jp</div>
-  <div>2 / 2 ページ（※三鷹市子ども育成課へのデータ共有を前提とした完全無記名調査）</div>
+  <div>2 / 2 ページ（※完全無記名による実態調査）</div>
 </div>
 
 </body>
@@ -362,6 +362,8 @@ cmd = [
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "--headless",
     "--disable-gpu",
+    "--no-sandbox",
+    "--user-data-dir=/tmp/chrome-pdf-profile",
     "--no-pdf-header-footer",
     f"--print-to-pdf={pdf_path}",
     html_path

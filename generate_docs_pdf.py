@@ -129,8 +129,8 @@ html_script = """<!DOCTYPE html>
     「サービス案内」ではなく「三鷹市の子育て環境改善のための実態調査」として依頼。
   </div>
   <div class="box-card" style="border-top:3px solid #10b981; margin:0;">
-    <strong style="color:#047857; display:block; margin-bottom:2px;">② 三鷹市役所事前相談の冠</strong>
-    「子ども育成課と事前相談済み」を伝え、公的信頼を一瞬で担保。
+    <strong style="color:#047857; display:block; margin-bottom:2px;">② 現役保護者目線での共感</strong>
+    三鷹市在住の現役保護者有志による調査であることを伝え、共感を形成。
   </div>
   <div class="box-card" style="border-top:3px solid #f59e0b; margin:0;">
     <strong style="color:#b45309; display:block; margin-bottom:2px;">③ 先生方の作業負担ゼロ</strong>
@@ -140,8 +140,8 @@ html_script = """<!DOCTYPE html>
 
 <div class="section-title">■ 2. 【電話編】受付の先生から園長先生につないでもらうトーク（30秒）</div>
 <div class="script-box">
-  「お忙しい時間帯に大変恐縮です。私、三鷹市下連雀で子育て支援の調査を行っております、一般社団法人KidsRideの七夕（たなばた）と申します。<br>
-  実は、<strong>三鷹市役所の子ども育成課様ともご相談をさせていただきながら、市内の保護者様が夕方の通園やお迎えで直面している困りごとに関する実態調査</strong>を行っております。<br>
+  「お忙しい時間帯に大変恐縮です。私、三鷹市下連雀で子育て支援の活動を行っております、一般社団法人KidsRideの七夕（たなばた）と申します。私自身も三鷹市で子どもを育てている保護者です。<br>
+  実は、<strong>市内の保護者様が日頃の通園やお迎えで直面している困りごとに関する実態調査アンケート</strong>を行っております。<br>
   先生方にお手間を取らせない形での簡単なアンケート配架のご相談でして、<strong>園長先生または主任の先生に1分だけ</strong>お取り次ぎいただくことは可能でしょうか？」
 </div>
 <div style="font-size:7.8pt; color:#64748b; margin-top:-2px; margin-bottom:8px;">
@@ -152,15 +152,14 @@ html_script = """<!DOCTYPE html>
 <div class="script-box" style="border-left-color: #10b981;">
   「園長先生、お時間をいただき誠にありがとうございます。一般社団法人KidsRideの七夕です。私自身も三鷹市で子どもを育てている保護者です。<br>
   本日ご連絡いたしましたのは、日頃先生方が直面されている<strong>『夕方のお迎え遅延や、急な残業時の延長保育対応』における先生方のご負担を少しでも減らすため、保護者の送迎のリアルな実態調査</strong>を行っているためです。<br>
-  先日、三鷹市役所の子ども育成課様とも協議を行い、<strong>地域における送迎課題や一時預かりへの送迎連携についてご相談</strong>させていただいております。<br>
   そこで貴園にお願いしたいのは、先生方にプリントを折って配っていただくような作業では一切ございません。<strong>登降園の打刻機や下駄箱の上に、当方が用意した小さな卓上POPと名刺サイズのQRカードを置かせていただくだけ</strong>で結構です。<br>
-  集計結果のサマリーレポートは<strong>貴園にも無償でご提供</strong>いたしますので、今後の園運営や市へのご要望資料としてもご活用いただけます。先生方のお手間は一切取らせませんので、ぜひ玄関に置かせていただけないでしょうか？」
+  集計結果のサマリーレポートは<strong>貴園にも無償でご提供</strong>いたしますので、今後の園運営や保護者ニーズ把握資料としてもご活用いただけます。先生方のお手間は一切取らせませんので、ぜひ玄関に置かせていただけないでしょうか？」
 </div>
 
 <div class="section-title">■ 4. 想定される反論への切り返し（Q&A）</div>
 <div class="qa-card">
   <div class="qa-q">Q1. 「特定の民間企業やサービスの宣伝は、園のルールで置けないことになっているのですが…」</div>
-  <div class="qa-a"><strong>A1.</strong> 「おっしゃる通りでございます。私どもは営利企業ではなく『一般社団法人』でございます。今回はサービスの加入勧誘ではなく、市役所にも共有する『送迎環境の実態把握アンケート（無記名）』でございます。営業活動や個人情報の収集は一切行いませんので、ご安心ください。」</div>
+  <div class="qa-a"><strong>A1.</strong> 「おっしゃる通りでございます。今回はサービスの加入勧誘ではなく、地域の送迎環境を改善するための『実態把握アンケート（完全無記名）』でございます。営業活動や個人情報の収集は一切行いませんので、ご安心ください。」</div>
 </div>
 <div class="qa-card">
   <div class="qa-q">Q2. 「今は行事などで忙しくて対応する余裕がないのですが…」</div>
@@ -168,7 +167,7 @@ html_script = """<!DOCTYPE html>
 </div>
 <div class="qa-card">
   <div class="qa-q">Q3. 「他の園はどうしているんですか？」</div>
-  <div class="qa-a"><strong>A3.</strong> 「はい、市内公立保育園や私立園、認定こども園、駅前の『のびのびひろば』など、三鷹市全域の就学前施設にお声がけを進めております。市役所子ども育成課様へも全園横断のデータとしてご報告いたしますので、ぜひ貴園の保護者様の声も反映させていただければ幸いです。」</div>
+  <div class="qa-a"><strong>A3.</strong> 「はい、市内公立保育園や私立園、認定こども園、駅前の『のびのびひろば』など、三鷹市全域の就学前施設にお声がけを進めております。ぜひ貴園の保護者様のリアルな声も反映させていただければ幸いです。」</div>
 </div>
 
 <div class="section-title">■ 5. 窓口訪問（突撃・挨拶）時の持ち物チェックリスト</div>
@@ -338,7 +337,7 @@ html_design_doc = """<!DOCTYPE html>
   </tr>
   <tr>
     <th>フッター（信頼性）</th>
-    <td>一般社団法人KidsRide（代表理事 七夕 光明・三鷹市在住保護者）/ 三鷹市役所子ども育成課へデータ共有</td>
+    <td>一般社団法人KidsRide（代表理事 七夕 光明・三鷹市在住保護者）</td>
   </tr>
 </table>
 
@@ -355,7 +354,7 @@ html_design_doc = """<!DOCTYPE html>
     <div style="font-weight:800; color:#059669; border-bottom:1px solid #e2e8f0; padding-bottom:2px; margin-bottom:4px;">【うら面】QRコード＆公的背景</div>
     <div>● QRコード配置（28mm×28mm）＋ スマホカメラで2分</div>
     <div>● 短縮URL表記: kidsride.jp/#survey</div>
-    <div style="color:#64748b; font-size:7.2pt; margin-top:2px;">※三鷹市役所子ども育成課へも集計結果を共有し、地域全体の送迎負担軽減に役立てます。個人情報なしで回答可能。</div>
+    <div style="color:#64748b; font-size:7.2pt; margin-top:2px;">※個人情報の登録なしで回答可能。集計結果は地域全体の送迎負担軽減に役立てます。</div>
   </div>
 </div>
 
@@ -380,6 +379,8 @@ def generate_pdf(html_text, filename):
         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
         "--headless",
         "--disable-gpu",
+        "--no-sandbox",
+        "--user-data-dir=/tmp/chrome-pdf-profile",
         "--no-pdf-header-footer",
         f"--print-to-pdf={pdf_file}",
         html_file

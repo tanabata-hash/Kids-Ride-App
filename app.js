@@ -262,6 +262,63 @@ function getInitialRoute() {
 // 受領済みの実アンケート回答（知人様・モニター登録済みデータ等のシード保持）
 const INITIAL_SURVEY_RESPONSES = [
   {
+    id: 'SURVEY-427203',
+    submittedAt: '2026/11/26 21:17',
+    name: '三鷹市保護者 様',
+    childAges: ['4〜5歳（年中・年長）', '小学校高学年（4〜6年生）'],
+    kindergarten: '三鷹市内の幼稚園・保育園',
+    transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
+    barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
+    barrierDetail: '',
+    troubleFrequency: '月に数回程度感じる',
+    troubleSituations: ['急な残業・突発的な仕事の都合', '雨や悪天候時'],
+    copingMethods: ['仕事を無理に切り上げて急いで対応した'],
+    mutualAidAcceptance: '急な残業や困った時だけ、単発（都度）で利用したい',
+    nobinobiStay: '状況によっては利用したい',
+    safeTransportMethods: ['手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
+    supporterInterest: '興味はあるが、他人の子どもを預かる責任や事故が少し心配',
+    comments: '',
+    email: ''
+  },
+  {
+    id: 'SURVEY-513709',
+    submittedAt: '2026/11/26 20:28',
+    name: '三鷹市保護者 様',
+    childAges: ['4〜5歳（年中・年長）'],
+    kindergarten: '三鷹市内の認可保育園',
+    transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
+    barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
+    barrierDetail: '',
+    troubleFrequency: '週に1〜2回程度感じる',
+    troubleSituations: ['雨や悪天候時', 'きょうだいの急な発熱・通院・看病'],
+    copingMethods: ['仕事を無理に切り上げて急いで対応した'],
+    mutualAidAcceptance: '条件や相手（顔見知りかどうか等）次第で利用を検討したい',
+    nobinobiStay: 'そもそも最大夜22時まで預けられる制度（のびのびひろば・トワイライトステイ）を知らなかった',
+    safeTransportMethods: ['リアルタイムGPS位置追跡と到着通知'],
+    supporterInterest: 'タイミングや都合が合う日なら引き受けてもよい',
+    comments: '',
+    email: ''
+  },
+  {
+    id: 'SURVEY-285094',
+    submittedAt: '2026/11/26 20:08',
+    name: '三鷹のぞみ幼稚園保護者 様',
+    childAges: ['4〜5歳（年中・年長）', '小学校高学年（4〜6年生）'],
+    kindergarten: '三鷹のぞみ幼稚園',
+    transportMethods: ['自転車（子ども乗せ・電動アシスト含む）'],
+    barrierToFirstChoice: 'なかった（自宅近くや通勤経路など、通いやすい園が第一希望だった）',
+    barrierDetail: '',
+    troubleFrequency: '月に数回程度感じる',
+    troubleSituations: ['きょうだいの急な発熱・通院・看病', '朝の出勤時間と登園時間のスケジュール調整'],
+    copingMethods: ['仕事を無理に切り上げて急いで対応した'],
+    mutualAidAcceptance: '条件や相手（顔見知りかどうか等）次第で利用を検討したい',
+    nobinobiStay: 'そもそも最大夜22時まで預けられる制度（のびのびひろば・トワイライトステイ）を知らなかった',
+    safeTransportMethods: ['手段にかかわらず、同じクラスや顔見知りの保護者であれば安心'],
+    supporterInterest: 'タイミングや都合が合う日なら引き受けてもよい',
+    comments: '',
+    email: 'saaaaaakiiiiii@gmail.com'
+  },
+  {
     id: 'SURVEY-20261125-01',
     submittedAt: '2026/11/25 20:00',
     name: '皮籠石 様 (kawagoishi)',
@@ -4948,8 +5005,35 @@ function AdminView() {
   // 【タブ8】アクセス解析（Web Traffic & Analytics）
   // ==========================================
   else if (currentTab === 'analytics') {
-    // 1. 実回答者4名（皮籠石様、藤原様、溝尻様、高橋様）のアンケート実アクセスログ（LINE経由・スマホ・三鷹市）
+    // 1. 実回答者7名のアンケート実アクセスログ（LINE経由・スマホ100%・東京都三鷹市）
     const baseMomAccessLogs = [
+      {
+        id: 'ACC-MOM-07',
+        timestamp: '2026/11/26 21:15:22',
+        path: '/#survey',
+        source: 'LINEアプリ経由',
+        device: 'iPhone (iOS)',
+        city: '東京都三鷹市',
+        visitorId: 'V-survey-427203'
+      },
+      {
+        id: 'ACC-MOM-06',
+        timestamp: '2026/11/26 20:25:40',
+        path: '/#survey',
+        source: 'LINEアプリ経由',
+        device: 'Android',
+        city: '東京都三鷹市',
+        visitorId: 'V-survey-513709'
+      },
+      {
+        id: 'ACC-MOM-05',
+        timestamp: '2026/11/26 20:05:11',
+        path: '/#survey',
+        source: 'LINEアプリ経由',
+        device: 'iPhone (iOS)',
+        city: '東京都三鷹市',
+        visitorId: 'V-saaaaaakiiiiii'
+      },
       {
         id: 'ACC-MOM-04',
         timestamp: '2026/11/25 20:38:12',
